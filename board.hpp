@@ -1,33 +1,24 @@
 #ifndef BOARD
 #define BOARD
 
-#include<vector>
-#include<cstdlib>
-#include<iostream>
-#include<conio.h>
-#include<map>
-#include<minmax.h>
-
-void writeColor(const char* text, unsigned char color = WHITE) {
-	printf("\033[97;%dm%s\033[m\033[?25l", color, text);
-}
-
 enum class TileType {
 	EMPTY = 0,
 	WALL = 1,
 	PLAY = 2,
 	ITEM = 3,
-	ENEMY = 4
+	ENEM = 4
 };
 
 class Tile {
 public:
 	TileType type = TileType::EMPTY;
 	Item* item = nullptr;
+	Enemy* enemy = nullptr;
 
 	Tile() {}
 	Tile(TileType type) : type(type) {}
 	Tile(Item* item) : type(TileType::ITEM), item(item) {}
+	Tile(Enemy* enemy) : type(TileType::ENEM), enemy(enemy) {}
 
 	void draw() {
 		if (type == TileType::EMPTY)
@@ -37,13 +28,19 @@ public:
 		if (type == TileType::PLAY)
 			writeColor("\1", YELLOW);
 		if (type == TileType::ITEM)
-			writeColor(item->symbol, YELLOW);
+			writeColor(item->symbol, item->color);
+		if (type == TileType::ENEM)
+			writeColor(enemy->symbol, enemy->color);
 	}
 
-	int interacted(Player& p) {
+	std::array<int, 4> interacted(Player* p) {
 		if (type == TileType::ITEM) {
-			return item->picked(p);
+			item->picked(p);
 		}
+		if (type == TileType::ENEM) {
+			return enemy->attacked(p);
+		}
+		return std::array<int, 4>();
 	}
 };
 
@@ -59,8 +56,6 @@ public:
 			board[0][i] = new Tile(TileType::WALL);
 			board[height - 1][i] = new Tile(TileType::WALL);
 		}
-		board[p.y][p.x] = new Tile(TileType::PLAY);
-		board[2][5] = new Tile(new GoldPile());
 	};
 
 	void movePlayer(char ch) {
@@ -75,7 +70,7 @@ public:
 			tileY = p.y - 1;
 		}
 		if ((ch == 'A' || ch == 'a' || ch == 75)) {
-			type = board[p.x][p.x - 1]->type;
+			type = board[p.y][p.x - 1]->type;
 			tileX = p.x - 1;
 		}
 		if ((ch == 'S' || ch == 's' || ch == 80)) {
@@ -87,19 +82,55 @@ public:
 			tileX = p.x + 1;
 		}
 
+		Item* item = board[tileY][tileX]->item;
+
+		// Interactions
 		switch (type) {
 		case TileType::ITEM:
-			board[tileY][tileX]->interacted(p);
-			rewriteStats();
+			board[tileY][tileX]->interacted(&p);
+			moveCursor(height, 0);
+			clearLine();
+			if (item->count > 1)
+				write("Picked up % %", item->count, color(item->name, item->color));
+			else
+				write("Picked up %", color(item->name, item->color));
+			writeStats();
 		case TileType::EMPTY:
 			p.x = tileX;
 			p.y = tileY;
 			break;
+		case TileType::ENEM:
+			std::array<int, 4> result = board[tileY][tileX]->interacted(&p);
+			moveCursor(height, 0);
+			clearLine();
+			write("Dealt ");
+			write(color("% damage", RED).c_str(), result[0]);
+			if (result[2] > 0) {
+				write(" in % hits, recieved ", result[1]);
+				write(color("% damage", RED).c_str(), result[2]);
+				write(" in % hits.", result[3]);
+			}
+			else {
+				write(" in % hits.", result[1]);
+			}
+			writeStats();
+			if (board[tileY][tileX]->enemy->health <= 0) {
+				board[tileY][tileX] = new Tile();
+				p.x = tileX;
+				p.y = tileY;
+			}
 		}
 
 		board[p.y][p.x] = new Tile(TileType::PLAY);
 		moveCursor(p.y, p.x);
 		writeColor("\1", YELLOW);
+	}
+
+	void boardInit() {
+		board[p.y][p.x] = new Tile(TileType::PLAY);
+		board[2][5] = new Tile(new GoldPile());
+		board[6][22] = new Tile(new WoodenSword());
+		board[4][28] = new Tile(new Enemy());
 	}
 
 	void drawBoard() {
@@ -109,20 +140,20 @@ public:
 				board[i][j]->draw();
 			std::cout << "\n";
 		}
-		rewriteStats();
+		writeStats();
 	}
 
-	void rewriteStats() {
-		moveCursor(height, 0);
-		char s[256];
-		sprintf_s(s, "Level: %d\r\n", p.level);
-		writeColor(s, GREEN);
-		sprintf_s(s, "Experience: %d/%d\r\n", p.exp, p.expForNext);
-		writeColor(s, GREEN);
-		sprintf_s(s, "Health: %d/%d\r\n", p.health, p.maxHealth);
-		writeColor(s, RED);
-		sprintf_s(s, "Gold: %d\r\n\033[?25l", p.gold);
-		writeColor(s, YELLOW);
+	void writeStats() {
+		moveCursor(height + 1, 0);
+		write(color("\x1b[2KLevel: %\n", GREEN).c_str(), p.level);
+		write(color("\x1b[2KExperience: %/%\n", GREEN).c_str(), p.exp, p.expForNext);
+		write(color("\x1b[2KHealth: %/%\n", RED).c_str(), p.health, p.maxHealth);
+		write(color("\x1b[2KGold: %\n", YELLOW).c_str(), p.gold);
+		write(color("\x1b[2KDamage: %-%\n", YELLOW).c_str(), p.minDamage, p.maxDamage);
+	}
+
+	void clearLine() {
+		std::cout << "\x1b[2K";
 	}
 
 private:

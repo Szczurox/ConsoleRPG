@@ -145,6 +145,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="board.hpp" />
+    <ClInclude Include="enemy.hpp" />
     <ClInclude Include="items.hpp" />
     <ClInclude Include="player.hpp" />
     <ClInclude Include="menu.hpp" />

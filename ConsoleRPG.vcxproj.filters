@@ -29,10 +29,13 @@
     <ClInclude Include="board.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="items.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="utils.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="items.hpp">
+    <ClInclude Include="enemy.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

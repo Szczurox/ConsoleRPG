@@ -1,80 +1,73 @@
 #ifndef MENU
 #define MENU
 
-#include<vector>
-#include<cstdlib>
-#include<iostream>
-#include<conio.h>
-
-enum Colors {
-	WHITE = 37,
-	RED = 31,
-	GREEN = 32,
-	YELLOW = 33,
-	BLUE = 34,
-	PURPLE = 35,
-	CYAN = 36,
-	BRIGHT_CYAN = 96,
-	BRIGHT_BG = 103,
-	BG = 97,
-};
-
 struct MenuItem {
 	const char* text;
 	unsigned char color;
-	MenuItem(const char* text = "", unsigned char color = 0) : text(text), color(color) {};
+	MenuItem(const char* text = "", unsigned char color = WHITE) : text(text), color(color) {};
 };
 
 class Menu {
 public:
 	// Menu
-	Menu(std::vector<MenuItem> options, MenuItem title = MenuItem()) : title(title), opts(options) {};
-	// Text info
-	Menu(MenuItem title) : title(title), opts(std::vector<MenuItem>({ MenuItem("CONTINUE", GREEN) })) {};
+	Menu(std::vector<MenuItem*>* options, MenuItem* title = new MenuItem()) : texts(new std::vector<MenuItem*>({ title })), opts(options) {};
+	// Menu with Texts
+	Menu(std::vector<MenuItem*>* options, std::vector<MenuItem*>* texts) : opts(options), texts(texts) {};
 
 	int open() {
 		option = 0;
 		int choice = -1;
-		size_t size = opts.size() - 1;
+		int size = (int)opts->size() - 1;
 		render();
 		while (choice == -1) {
 			if (_kbhit()) {
 				char ch = _getch();
 
 				// Esc
-				if (ch == 27) return 0;
+				if (ch == 27) return -1;
 
-				system("cls");
+				if (size >= 0) {
+					system("cls");
 
-				if (ch == 'w' || ch == 'W' || ch == 72)  // Up
-					option--;
-				else if (ch == 's' || ch == 'S' || ch == 80)  // Down
-					option++;
+					if (ch == 'w' || ch == 'W' || ch == 72)  // Up
+						option--;
+					else if (ch == 's' || ch == 'S' || ch == 80)  // Down
+						option++;
 
-				// Menu cap (prevents player from choosing mode that doesn't exist)
-				if (option < 0) option = 0;
-				if (option > size) option = (int)size;
+					// Menu cap (prevents player from choosing mode that doesn't exist)
+					if (option < 0) option = 0;
+					if (option > size) option = (int)size;
 
-				if (ch == '\r' || ch == ' ')
-					choice = option;
+					if (ch == '\r' || ch == ' ')
+						choice = option;
 
-				render();
+					render();
+				}
 			}
 		}
 		return choice;
 	};
-	~Menu() {};
 
 private:
-	MenuItem title;
-	std::vector<MenuItem> opts;
+	std::vector<MenuItem*>* texts;
+	std::vector<MenuItem*>* opts;
 	int option = 0;
 
 	void render() {
-		printf("          \033[97;%dm%s\033[m\n\033[?25l", title.color, title.text);
-		for (int i = 0; i < opts.size(); i++) {
-			MenuItem m = opts[i]; 
+		system("cls");
+		// Render menu text
+		for (int i = 0; i < texts->size(); i++) {
+			MenuItem m = *texts->at(i);
+			printf("           \033[97;%dm%s\033[m\n\033[?25l", m.color, m.text);
+		}
+		// Render menu elements
+		for (int i = 0; i < opts->size(); i++) {
+			MenuItem m = *opts->at(i); 
 			printf("         \033[%d;%dm%s%s%s\033[m\n", BG, m.color, i == option ? "> " : "  ", m.text, i == option ? " <" : "");
+		}
+		// If menu is empty write (empty), empty inventory
+		if ((int)opts->size() <= 0) {
+			printf("           \033[97;%dm(empty)\033[m\n\033[?25l", WHITE);
 		}
 	}
 };

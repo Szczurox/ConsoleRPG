@@ -1,10 +1,18 @@
-#include<iostream>
 #include<vector>
 #include<cstdlib>
+#include<iostream>
+#include<conio.h>
+#include<map>
+#include<minmax.h>
+#include<cstdarg>
+#include<sstream>
+#include<array>
 
+#include"utils.hpp"
 #include"menu.hpp"
 #include"player.hpp"
 #include"items.hpp"
+#include"enemy.hpp"
 #include"board.hpp"
 
 #define B_HEIGHT 15
@@ -14,33 +22,46 @@ bool isRunning = true;
 
 int startGame();
 int drawEscMenu();
+bool drawDeadMenu();
 
 int main() {
 	// Hide the console cursor
 	std::cout << "\033[?25l";
+	srand((unsigned int)time(NULL));
 
 	// Clear the entire screen
 	system("cls");
 
-    MenuItem title("Console RPG", BRIGHT_CYAN);
+	MenuItem title("Console RPG", BRIGHT_CYAN);
 	MenuItem newGame("New Game", GREEN);
 	MenuItem loadSave("Load Save", YELLOW);
 	MenuItem info("Info", BLUE);
 	MenuItem exit("Exit", RED);
-    std::vector<MenuItem> mainOpts = {newGame, loadSave, info, exit};
-    Menu mainMenu(mainOpts, title);
+	std::vector<MenuItem*> mainOpts = { &newGame, &loadSave, &info, &exit };
+	Menu mainMenu(&mainOpts, &title);
 
-	int choice = mainMenu.open();
-	switch (choice)
-	{
-	case 0: 
-		startGame();
-		break;
-	case 1:
-		startGame();
-		break;
-	default:
-		break;
+	bool end = false;
+	while (!end) {
+		int res = 1;
+		int choice = mainMenu.open();
+		switch (choice)
+		{
+		case 0:
+			res = startGame();
+			break;
+		case 1:
+			res = startGame();
+			break;
+		case 2:
+			break;
+		default:
+			res = 0;
+			break;
+		}
+		if (res == -1)
+			end = drawDeadMenu();
+		if(res == 0)
+			end = true;
 	}
 
 	return 2;
@@ -48,6 +69,8 @@ int main() {
 
 
 int startGame() {
+	isRunning = true;
+
 	system("cls");
 
 	// Player Variables
@@ -55,7 +78,8 @@ int startGame() {
 
 	// Board Variables
 	Board b(B_WIDTH, B_HEIGHT, p);
-
+	
+	b.boardInit();
 	b.drawBoard();
 	while (isRunning) {
 		char ch = 0;
@@ -68,25 +92,33 @@ int startGame() {
 					drawEscMenu();
 					b.drawBoard();
 				};
+				if (ch == 'I' || ch == 'i') {
+					p.showInventory();
+					b.drawBoard();
+				};
 				b.movePlayer(ch);
+				if (p.health <= 0) {
+					isRunning = false;
+				}
 			}
 		}
 	}
 
 	system("cls");
 
+	if(p.health <= 0)
+		return -1;
 	return 0;
 }
 
 int drawEscMenu() {
-	system("cls");
-	MenuItem title("  ", BRIGHT_CYAN);
+	MenuItem title("", BRIGHT_CYAN);
 	MenuItem back("Back To Game", GREEN);
 	MenuItem save("Save Game", YELLOW);
 	MenuItem info("Info", BLUE);
 	MenuItem exit("Leave Game", RED);
-	std::vector<MenuItem> mainOpts = { back, save, info, exit };
-	Menu escMenu(mainOpts, title);
+	std::vector<MenuItem*> mainOpts = { &back, &save, &info, &exit };
+	Menu escMenu(&mainOpts, &title);
 
 	int choice = escMenu.open();
 	switch (choice)
@@ -97,10 +129,22 @@ int drawEscMenu() {
 		break;
 	case 2:
 		break;
-	default:
+	case 3:
 		isRunning = false;
+		break;
+	default:
 		break;
 	}
 
 	return 27;
+}
+
+bool drawDeadMenu() {
+	MenuItem title("Game Over\n", RED);
+	MenuItem back("Back To Main Menu", GREEN);
+	MenuItem exit("Leave Game", RED);
+	std::vector<MenuItem*> mainOpts = { &back, &exit };
+	Menu escMenu(&mainOpts, &title);
+
+	return escMenu.open();
 }
