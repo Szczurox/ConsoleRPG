@@ -10,7 +10,7 @@ enum class ItemType {
 	USABLE = 3
 };
 
-class Item {
+class Item : std::enable_shared_from_this<Item> {
 public:
 	const char* name = "";
 	const char* symbol = "@";
@@ -25,14 +25,16 @@ public:
 	unsigned char color = YELLOW;
 	Item() {}
 	Item(const char* name, ItemType type, const char* symbol = "@", unsigned char color = YELLOW) : name(name), type(type) {}
+	// 1 - Add to inventory
 	virtual int picked(Player* player) { return 0; }
+	// 1 - Weapon, 2 - Armor
 	virtual int used(Player* player) { return 0; }
 	virtual int itemMenu(Player* p) { return 0; };
 };
 
 class Player {
 public:
-	std::map<std::string, Item*> inv;
+	std::map<std::string, std::shared_ptr<Item>> inv;
 	int health = 100;
 	int maxHealth = 100;
 	int baseDamage = 1;
@@ -43,12 +45,12 @@ public:
 	int exp = 0;
 	int expForNext = 100;
 	int level = 0;
-	Item* weapon = nullptr;
-	Item* armor = nullptr;
-	size_t x = 1;
-	size_t  y = 1;
+	std::shared_ptr<Item> weapon = nullptr;
+	std::shared_ptr<Item> armor = nullptr;
+	int x = 1;
+	int y = 1;
 
-	void addItem(Item* item) {
+	void addItem(std::shared_ptr<Item> item) {
 		if (inv.find(item->name) == inv.end())
 			inv.insert({ item->name, item });
 		else
@@ -71,7 +73,7 @@ public:
 		system("cls");
 		MenuItem title("Inventory", BRIGHT_CYAN);
 		std::vector<MenuItem*> items;
-		std::vector<Item*> trueItems;
+		std::vector<std::shared_ptr<Item>> trueItems;
 		// Indicator that the armor/weapon is currently being worn by the player
 		const char* selected = "\37";
 		for (auto item : inv) {
@@ -80,7 +82,7 @@ public:
 				if (item.second == armor || item.second == weapon) {
 					char s[256];
 					sprintf_s(s, "%s x %d %s", item.second->name, item.second->count, selected);
-					items.push_back(new MenuItem(s, WHITE));
+					items.push_back( new MenuItem(s, WHITE));
 				}
 				else {
 					char s[256];
@@ -96,13 +98,15 @@ public:
 		while (choice != -1) {
 			choice = inventory.open();
 			if (choice != -1) {
-				Item* item = trueItems[choice];
+				std::shared_ptr<Item> item = trueItems[choice];
 				// Item menu
 				int result = item->itemMenu(this);
 				if (result == -1) {
 					items.erase(items.begin()+choice);
 					trueItems.erase(trueItems.begin() + choice);
 				}
+				if (result == 1) weapon = item;
+				if (result == 2) armor = item;
 				if (item == armor || item == weapon) {
 					char s[256];
 					sprintf_s(s, "%s x %d %s", item->name, item->count, selected);
@@ -127,12 +131,7 @@ public:
 	}
 	
 	int attack() {
-		return rand() % (maxDamage-minDamage+1) + minDamage;
-	}
-
-	~Player() {
-		delete weapon;
-		delete armor;
+		return randMinMax(minDamage, maxDamage);
 	}
 };
 

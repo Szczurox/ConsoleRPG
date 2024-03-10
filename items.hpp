@@ -8,14 +8,12 @@ public:
 		count = 1;
 	}
 	int picked(Player* player) {
-		player->addItem(this);
 		return 1;
 	}
 	virtual int used(Player* player) {
-		player->weapon = this;
 		player->minDamage = player->baseDamage + minDmg;
 		player->maxDamage = player->baseDamage + maxDmg;
-		return 0;
+		return 1;
 	}
 	virtual int itemMenu(Player* p) {
 		MenuItem nameI(name, BRIGHT_CYAN);
@@ -35,7 +33,7 @@ public:
 		while (choice == -2) {
 			choice = menu.open();
 			if (choice == 0)
-				used(p);
+				return used(p);
 			if (choice == 1) {
 				MenuItem option("Are you sure you want to remove this item from your inventory?", RED);
 				MenuItem no("No", WHITE);
@@ -47,7 +45,7 @@ public:
 					choice = -2;
 				else {
 					p->removeItem(name, 1);
-					if (p->weapon == this)
+					if (p->weapon.get() == this)
 						p->weapon = nullptr;
 					return -1;
 				}
@@ -64,13 +62,11 @@ public:
 		count = 1;
 	}
 	int picked(Player* player) {
-		player->addItem(this);
 		return 1;
 	}
 	virtual int used(Player* player) {
-		player->armor = this;
 		player->defence = prot;
-		return 0;
+		return 2;
 	}
 	virtual int itemMenu(Player* p) {
 		MenuItem nameI(name, BRIGHT_CYAN);
@@ -90,7 +86,7 @@ public:
 		while (choice == -2) {
 			choice = menu.open();
 			if (choice == 0)
-				used(p);
+				return used(p);
 			if (choice == 1) {
 				MenuItem option("Are you sure you want to remove this item from your inventory?", RED);
 				MenuItem no("No", WHITE);
@@ -102,7 +98,7 @@ public:
 					choice = -2;
 				else {
 					p->removeItem(name, 1);
-					if (p->armor == this)
+					if (p->armor.get() == this)
 						p->armor = nullptr;
 					return -1;
 				}
@@ -114,12 +110,12 @@ public:
 
 class GoldPile : public Item {
 public:
-	GoldPile() {
+	GoldPile(int minGold, int maxGold) {
 		type = ItemType::RESOURCE;
 		name = "gold";
+		count = randMinMax(minGold, maxGold);
 	}
 	int picked(Player* player) {
-		count = rand() % 250 + 1;
 		player->gold += count;
 		return 1;
 	}

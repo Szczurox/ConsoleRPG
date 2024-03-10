@@ -7,6 +7,7 @@
 #include<cstdarg>
 #include<sstream>
 #include<array>
+#include<memory>
 
 #include"utils.hpp"
 #include"menu.hpp"

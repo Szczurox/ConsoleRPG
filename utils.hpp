@@ -1,6 +1,21 @@
 #ifndef UTILS
 #define UTILS
 
+// Directional arrays
+// Used for checking tiles surrounding a main tile in this order:
+//   1
+// 3   4
+//   2 
+int dx[4] = { 0, 0, -1, 1 };
+int dy[4] = { -1, 1, 0, 0 };
+
+enum Direction {
+	UP = 0,
+	DOWN = 1,
+	LEFT = 2,
+	RIGHT = 3
+};
+
 enum Colors {
 	WHITE = 37,
 	RED = 31,
@@ -50,8 +65,21 @@ void write(const char* format, T value, Args ... args) {
 	}
 }
 
-void moveCursor(size_t row, size_t col) {
+void moveCursor(size_t col, size_t row) {
 	printf("\033[%d;%dH\033[?25l", (int)row + 1, (int)col + 1);
 }
+
+void clearLine(size_t row) {
+	moveCursor(0, row);
+	std::cout << "\x1b[2K";
+}
+
+int randMinMax(int min, int max) {
+	return rand() % (max - min + 1) + min;
+}
+
+int distance(int x, int y, int x2, int y2) {
+	return (int)sqrtf((float)((y - y2) * (y - y2) + (x - x2) * (x - x2)));
+};
 
 #endif // !UTILS
