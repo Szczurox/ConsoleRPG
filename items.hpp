@@ -11,9 +11,17 @@ public:
 		return 1;
 	}
 	virtual int used(Player* player) {
-		player->minDamage = player->baseDamage + minDmg;
-		player->maxDamage = player->baseDamage + maxDmg;
-		return 1;
+		if (player->weapon == nullptr || player->weapon.get()->name != name) {
+			player->minDamage = player->baseDamage + minDmg;
+			player->maxDamage = player->baseDamage + maxDmg;
+			return 1;
+		}
+		else {
+			player->minDamage = player->baseDamage;
+			player->maxDamage = player->baseDamage; 
+			return 3;
+		}
+		return 5;
 	}
 	virtual int itemMenu(Player* p) {
 		MenuItem nameI(name, BRIGHT_CYAN);
@@ -23,7 +31,11 @@ public:
 		MenuItem damage(s, WHITE);
 		std::vector<MenuItem*> texts({ &nameI, &loreI });
 
-		MenuItem equip("Equip", GREEN);
+		MenuItem equip;
+		if (p->weapon == nullptr || p->weapon.get()->name != name)
+			equip = MenuItem("Equip", GREEN);
+		else 
+			equip = MenuItem("Unequip", GREEN);
 		MenuItem remove("Remove", RED);
 		MenuItem back("Back", WHITE);
 		std::vector<MenuItem*> options({ &equip, &remove, &back });
@@ -65,8 +77,15 @@ public:
 		return 1;
 	}
 	virtual int used(Player* player) {
-		player->defence = prot;
-		return 2;
+		if (player->weapon == nullptr || player->weapon.get()->name != name) {
+			player->defence = prot;
+			return 2;
+		}
+		else {
+			player->defence = 0;
+			return 4;
+		}
+		return 5;
 	}
 	virtual int itemMenu(Player* p) {
 		MenuItem nameI(name, BRIGHT_CYAN);
@@ -115,9 +134,10 @@ public:
 		name = "gold";
 		count = randMinMax(minGold, maxGold);
 	}
+
 	int picked(Player* player) {
 		player->gold += count;
-		return 1;
+		return 0;
 	}
 };
 

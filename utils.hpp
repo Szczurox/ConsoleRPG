@@ -26,7 +26,9 @@ enum Colors {
 	CYAN = 36,
 	BRIGHT_CYAN = 96,
 	BRIGHT_BG = 103,
+	YELLOW_BG = 43,
 	BG = 97,
+	GREY = 90,
 };
 
 void writeColor(const char* text, unsigned char color = WHITE) {
@@ -65,12 +67,12 @@ void write(const char* format, T value, Args ... args) {
 	}
 }
 
-void moveCursor(size_t col, size_t row) {
+void setCursor(size_t col, size_t row) {
 	printf("\033[%d;%dH\033[?25l", (int)row + 1, (int)col + 1);
 }
 
 void clearLine(size_t row) {
-	moveCursor(0, row);
+	setCursor(0, row);
 	std::cout << "\x1b[2K";
 }
 

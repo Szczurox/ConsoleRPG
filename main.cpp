@@ -8,6 +8,7 @@
 #include<sstream>
 #include<array>
 #include<memory>
+#include<algorithm>
 
 #include"utils.hpp"
 #include"menu.hpp"
@@ -16,8 +17,8 @@
 #include"enemy.hpp"
 #include"board.hpp"
 
-#define B_HEIGHT 15
-#define B_WIDTH 50
+#define B_HEIGHT 24
+#define B_WIDTH 90
 
 bool isRunning = true;
 
@@ -92,12 +93,12 @@ int startGame() {
 				if (ch == 27) {
 					drawEscMenu();
 					b.drawBoard();
-				};
-				if (ch == 'I' || ch == 'i') {
+				}
+				else if (ch == 'I' || ch == 'i') {
 					p.showInventory();
 					b.drawBoard();
-				};
-				b.movePlayer(ch);
+				}
+				else b.movePlayer(ch);
 				if (p.health <= 0) {
 					isRunning = false;
 				}

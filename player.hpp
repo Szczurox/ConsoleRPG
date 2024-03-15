@@ -35,6 +35,8 @@ public:
 class Player {
 public:
 	std::map<std::string, std::shared_ptr<Item>> inv;
+	std::shared_ptr<Item> weapon = nullptr;
+	std::shared_ptr<Item> armor = nullptr;
 	int health = 100;
 	int maxHealth = 100;
 	int baseDamage = 1;
@@ -45,8 +47,8 @@ public:
 	int exp = 0;
 	int expForNext = 100;
 	int level = 0;
-	std::shared_ptr<Item> weapon = nullptr;
-	std::shared_ptr<Item> armor = nullptr;
+	int curRoomNum = 0;
+	int curFloor = 0;
 	int x = 1;
 	int y = 1;
 
@@ -105,8 +107,16 @@ public:
 					items.erase(items.begin()+choice);
 					trueItems.erase(trueItems.begin() + choice);
 				}
-				if (result == 1) weapon = item;
-				if (result == 2) armor = item;
+				else if (result == 1) weapon = item;
+				else if (result == 2) armor = item;
+
+				else if (result == 3 || result == 4) {
+					if (result == 3) weapon = nullptr;
+					else if (result == 4) armor = nullptr;
+					char s[256];
+					sprintf_s(s, "%s x %d", item->name, item->count);
+					items[choice]->text = s;
+				}
 				if (item == armor || item == weapon) {
 					char s[256];
 					sprintf_s(s, "%s x %d %s", item->name, item->count, selected);

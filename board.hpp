@@ -6,7 +6,10 @@ enum class TileType {
 	WALL = 1,
 	PLAY = 2,
 	ITEM = 3,
-	ENEM = 4
+	ENEM = 4,
+	VOID = 5,
+	DOOR = 6,
+	PATH = 7
 };
 
 class Tile {
@@ -14,26 +17,74 @@ public:
 	TileType type = TileType::EMPTY;
 	std::shared_ptr<Item> item = nullptr;
 	std::shared_ptr<Enemy> enemy = nullptr;
+	int roomNum = 0;
+	bool isVisible = true;
 
-	Tile() {}
-	Tile(TileType type) : type(type) {}
-	Tile(std::shared_ptr<Item> item) : type(TileType::ITEM), item(item) {}
-	Tile(std::shared_ptr<Enemy> enemy) : type(TileType::ENEM), enemy(enemy) {}
+	Tile(int roomNum) : roomNum(roomNum) {}
+	Tile(TileType type, int roomNum, bool isVisible = true) : type(type), isVisible(isVisible), roomNum(roomNum) {}
+	Tile(std::shared_ptr<Item> item, int roomNum, bool isVisible = true) : type(TileType::ITEM), item(item), isVisible(isVisible), roomNum(roomNum) {}
+	Tile(std::shared_ptr<Enemy> enemy, int roomNum, bool isVisible = true) : type(TileType::ENEM), enemy(enemy), isVisible(isVisible), roomNum(roomNum) {}
+	Tile(bool isDoor, int roomNum, int room, bool isVisible = true) : type(TileType::DOOR), roomNum(roomNum), isVisible(isVisible) {}
 
-	void draw() {
-		if (type == TileType::EMPTY)
-			std::cout << ".";
-		if (type == TileType::WALL)
-			writeColor("#", WHITE);
-		if (type == TileType::PLAY)
-			writeColor("\1", YELLOW);
-		if (type == TileType::ITEM)
-			writeColor(item->symbol, item->color);
-		if (type == TileType::ENEM)
-			writeColor(enemy->symbol, enemy->color);
+	void draw(Player* p) {
+		if (roomNum == p->curRoomNum && type != TileType::PATH) {
+			isVisible = true;
+		}
+		if (isVisible) {
+			switch (type)
+			{
+			case TileType::EMPTY:
+				if (p->curRoomNum == roomNum) {
+					std::cout << ".";
+					break;
+				}
+				std::cout << " ";
+				break;
+			case TileType::VOID:
+				std::cout << " ";
+				break;
+			case TileType::ITEM:
+				if (p->curRoomNum == roomNum) {
+					writeColor(item->symbol, item->color);
+					break;
+				}
+				std::cout << " ";
+				break;
+			case TileType::ENEM:
+				if (p->curRoomNum == roomNum) {
+					writeColor(enemy->symbol, enemy->color);
+					break;
+				}
+				std::cout << " ";
+				break;
+			case TileType::WALL:
+				writeColor("#", WHITE);
+				break;
+			case TileType::PATH:
+				writeColor(".", GREY);
+				break;
+			case TileType::PLAY:
+				writeColor("\1", YELLOW);
+				break;
+			case TileType::DOOR:
+				writeColor("#", GREY);
+				break;
+			default:
+				break;
+			}
+		}
+		else std::cout << " ";
 	}
 
-	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> interacted(Player* p) {
+	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> interacted(Player* p, int par = 0) {
+		if (type == TileType::DOOR) {
+			if (par == 0) {
+				p->curRoomNum = roomNum;
+			}
+			else {
+				p->curRoomNum = -1;
+			}
+		}
 		if (type == TileType::ITEM) {
 			int res = item->picked(p);
 			if (res == 1) p->addItem(item);
@@ -44,140 +95,382 @@ public:
 	}
 };
 
+class Room {
+public:
+	int doors[4] = { -1, -1, -1, -1 };
+	int neighbours[4] = { -1, -1, -1, -1 };
+	// Top left corner of the room coordinates
+	int x = 0;
+	int y = 0;
+	int width = 10;
+	int height = 5;
+	int bufferX = 0;
+	// Room number
+	int num = 0;
+	Room() {}
+	Room(int num, int x, int y, int width, int height, int bufferX) : num(num), x(x), y(y), width(width), height(height), bufferX(bufferX) {}
+	void genDoor(int d) {
+		if (d < 2)
+			doors[d] = x + rand() % (width - 2) + 1;
+		if (d > 1)
+			doors[d] = y + rand() % (height - 2) + 1;
+	}
+
+	virtual Tile summonEntities() {
+		return Tile(num);
+	}
+
+	virtual void create(std::vector<std::vector<Tile>>& board, std::vector<std::shared_ptr<Enemy>>& enemies) {
+		int xW = x + width;
+		int yH = y + height;
+		for (int i = y; i < yH; i++) {
+			board[x][i] = Tile(TileType::WALL, num, false);
+			board[xW - 1][i] = Tile(TileType::WALL, num, false);
+		}
+		for (int i = x; i < xW; i++) {
+			board[i][y] = Tile(TileType::WALL, num, false);
+			board[i][yH - 1] = Tile(TileType::WALL, num, false);
+		}
+		if(doors[0] != -1)
+			board[doors[0]][y] = Tile(true, num, neighbours[0], false);
+		if (doors[1] != -1)
+			board[doors[1]][yH - 1] = Tile(true, num, neighbours[1], false);
+		if (doors[2] != -1)
+			board[x][doors[2]] = Tile(true, num, neighbours[2], false);
+		if (doors[3] != -1)
+			board[xW - 1][doors[3]] = Tile(true, num, neighbours[3], false);
+		for (int i = x + 1; i < xW - 1; i++)
+			for (int j = y + 1; j < yH - 1; j++) {
+				Tile entity = summonEntities();
+				if (entity.type == TileType::ENEM) {
+					entity.enemy->x = i;
+					entity.enemy->y = j;
+					enemies.push_back(entity.enemy);
+				}
+				if(board[i][j].type == TileType::VOID)
+					board[i][j] = entity;
+			}
+	}
+};
+
+class BasicRoom : public Room {
+public:
+	BasicRoom(int numb, int xC, int yC, int w, int h, int buffX) {
+		num = numb;
+		x = xC;
+		y = yC;
+		width = w;
+		height = h;
+		bufferX = buffX;
+	}
+	virtual Tile summonEntities() {
+		int rng = rand() % 100 + 1;
+		if (rng < 3) return Tile(std::shared_ptr<Item>(new GoldPile(100, 250)), num);
+		if (rng > 98) return Tile(std::shared_ptr<Enemy>(new Skeleton(0, 0, num)), num);
+		else return Tile(num);
+	}
+};
+
+class Tresury : public Room {
+public:
+	Tresury(int numb, int xC, int yC, int w, int h, int buffX) {
+		num = numb;
+		x = xC;
+		y = yC;
+		width = w;
+		height = h;
+		bufferX = buffX;
+	}
+	virtual Tile summonEntities() {
+		int rng = rand() % 1000 + 1;
+		if (rng < 100) return Tile(std::shared_ptr<Item>(new GoldPile(100, 250)), num);
+		else return Tile(num);
+	}
+};
+
 class Board {
 public:
 	std::vector<std::vector<Tile>> board;
 	std::vector<std::shared_ptr<Enemy>> enemies;
-	Board(size_t width, size_t height, Player& player) : width(width), height(height), p(player), board(width, std::vector<Tile>(height, Tile())) {
-		for (int i = 0; i < height; i++) {
-			board[0][i] = Tile(TileType::WALL);
-			board[width - 1][i] = Tile(TileType::WALL);
+	Board(size_t width, size_t height, Player& player) : width(width), height(height), p(player), board(width, std::vector<Tile>(height, Tile(TileType::VOID, 0))) {
+		std::cout << "loading";
+		std::vector<std::vector<std::shared_ptr<Room>>> rooms;
+		std::vector<std::shared_ptr<Room>> curFloor;
+		int lastX = 0;
+		int lastY = 0;
+		int lowY = 0;
+		// Add data for creating random amount of random rooms
+		for (int i = 0; i < 20; i++) {
+			int roomType = rand() % 100 + 1;
+			int roomWidth = rand() % 20 + 7;
+			int roomHeight = rand() % 7 + 4;
+			// Space between rooms horizontally
+			int bufferX = rand() % 6 + 1; 
+			int yRoom = lastY + roomHeight; 
+			int xRoom = lastX + roomWidth;
+			if (yRoom >= height) break;
+			if (xRoom < width) {
+				if(roomType < 10)
+					curFloor.push_back(std::shared_ptr<Room>(new Tresury(i, lastX, lastY, roomWidth, roomHeight, bufferX)));
+				else
+					curFloor.push_back(std::shared_ptr<Room>(new BasicRoom(i, lastX, lastY, roomWidth, roomHeight, bufferX)));
+				lastX += roomWidth + bufferX;
+				if (lowY < yRoom + 1) lowY = yRoom + 1;
+			}
+			else if (yRoom + 1 < height) { 
+				lastY = lowY;
+				lastX = 0;
+				rooms.push_back(curFloor);
+				curFloor = std::vector<std::shared_ptr<Room>>();
+			}
 		}
-		for (int i = 0; i < width; i++) {
-			board[i][0] = Tile(TileType::WALL);
-			board[i][height - 1] = Tile(TileType::WALL);
+		// Create all the rooms on the board
+		int hSize = (int)rooms.size();
+		for (int i = 0; i < hSize; i++) {
+			int wSize = (int)rooms[i].size();
+			int wSize2 = -1;
+			for (int j = 0; j < wSize; j++) {
+				for (int d = 0; d < 4; d++) {
+					if (d == 0 && i - 1 >= 0 && j >= rooms[i - 1].size()) continue;
+					if (d == 1 && i + 1 < hSize && j >= rooms[i + 1].size()) continue;
+					int dI = i + dy[d];
+					int dJ = j + dx[d];
+					if (dI >= 0 && dJ >= 0 && dI < hSize && dJ < wSize) {
+						rooms[i][j]->neighbours[d] = rooms[dI][dJ]->num;
+						rooms[i][j]->genDoor(d);
+					}
+				}
+				rooms[i][j]->create(board, enemies);
+			}
+		}
+		// Add paths between rooms
+		for (int i = 0; i < hSize; i++) {
+			int wSize = (int)rooms[i].size();
+			int wSize2 = -1;
+			if (i + 1 < hSize)
+				wSize2 = (int)rooms[i + 1].size();
+			for (int j = 0; j < wSize; j++) {
+				std::shared_ptr<Room> r1 = rooms[i][j];
+				if (rooms[i][j]->doors[1] != -1 && i + 1 < hSize && j < wSize2) {
+					std::shared_ptr<Room> r2 = rooms[i + 1][j];
+					int r1x = r1->doors[1];
+					int r1y = r1->y + r1->height - 1;
+					while (r2->y - 1 > r1y || r1x != r2->doors[0]) {
+						if (r2->y - 1 > r1y && board[r1x][r1y+1].type != TileType::WALL)
+							r1y += 1;
+						else if (r2->doors[0] < r1x && board[r1x - 1][r1y].type != TileType::WALL)
+							r1x -= 1;
+						else if (r2->doors[0] > r1x && board[r1x + 1][r1y].type != TileType::WALL)
+							r1x += 1;
+						changeTile(r1x, r1y, Tile(TileType::PATH, r2->num, false));
+					}
+				}
+				if (rooms[i][j]->doors[3] != -1 && j + 1 < wSize) {
+					std::shared_ptr<Room> r2 = rooms[i][j + 1];
+					int r1x = r1->x + r1->width - 1;
+					int r1y = r1->doors[3];
+					while (r2->x - 1 > r1x || r1y != r2->doors[2]) {
+						if (r2->x - 1 > r1x && board[r1x + 1][r1y].type != TileType::WALL) 
+							r1x += 1;
+						else if (r2->doors[2] > r1y && board[r1x][r1y + 1].type != TileType::WALL)
+							r1y += 1;
+						else if (r2->doors[2] < r1y && board[r1x][r1y - 1].type != TileType::WALL)
+							r1y -= 1;
+						changeTile(r1x, r1y, Tile(TileType::PATH, r2->num, false));
+					}
+				}
+			}
 		}
 	};
 
 	void boardInit() {
-
-		board[p.x][p.y] = Tile(TileType::PLAY);
-		board[5][2] = Tile(std::shared_ptr<Item>(new GoldPile(10, 250)));
-		board[22][6] = Tile(std::shared_ptr<Item>(new WoodenSword()));
-		enemies.push_back(std::shared_ptr<Enemy>(new Enemy(32, 3)));
-		for (std::shared_ptr<Enemy> e : enemies) {
-			if (board[e->x][e->y].type == TileType::EMPTY)
-				board[e->x][e->y] = Tile(e);
-		}
+		board[p.x][p.y] = Tile(TileType::PLAY, p.curRoomNum, true);
+		board[3][2] = Tile(std::shared_ptr<Item>(new GoldPile(10, 250)), 0);
+		board[5][2] = Tile(std::shared_ptr<Item>(new WoodenSword()), 0);
 	}
 
 	void drawBoard() {
 		system("cls");
+		char s[256];
+		sprintf_s(s, "MODE %d,%d", (int)width+50, (int)height+10);
+		system(s);
 		for (int i = 0; i < height; i++) {
 			for (int j = 0; j < width; j++)
-				board[j][i].draw();
+				board[j][i].draw(&p);
 			std::cout << "\n";
 		}
 		writeStats();
+		writeStats2();
+		writeStats3();
+		startInfo();
 	}
 
 	void writeStats() {
-		moveCursor(width + 1, 1);
+		setCursor(width + 1, 1);
 		// Remove any character atrifacts that may appear
-		const char* clearBuffer = "                                ";
-		write(color("Level: %%", GREEN).c_str(), p.level, clearBuffer);
-		moveCursor(width + 1, 2);
-		write(color("Experience: %/%%", GREEN).c_str(), p.exp, p.expForNext, clearBuffer);
-		moveCursor(width + 1, 3);
-		write(color("Health: %/%%", RED).c_str(), p.health, p.maxHealth, clearBuffer);
-		moveCursor(width + 1, 4);
-		write(color("Gold: %%", YELLOW).c_str(), p.gold, clearBuffer);
+		std::cout << "============================";
+		setCursor(width + 1, 2);
+		std::cout << "|                          |";
+		setCursor(width + 3, 2);
+		write(color("Level: %\n", GREEN).c_str(), p.level);
+		setCursor(width + 1, 3);
+		std::cout << "|                          |";
+		setCursor(width + 3, 3);
+		write(color("Experience: %/%\n", GREEN).c_str(), p.exp, p.expForNext);
+		setCursor(width + 1, 4);
+		std::cout << "|                          |";
+		setCursor(width + 3, 4);
+		write(color("Health: %/%\n", RED).c_str(), p.health, p.maxHealth);
+		setCursor(width + 1, 5);
+		std::cout << "|                          |";
+		setCursor(width + 3, 5);
+		write(color("Gold: %\n", YELLOW).c_str(), p.gold);
+		setCursor(width + 1, 6);
+		std::cout << "============================";
+	}
+
+	void writeStats2() {
+		setCursor(width + 1, 8);
+		// Remove any character atrifacts that may appear
+		std::cout << "============================";
+		setCursor(width + 1, 9);
+		std::cout << "|                          |";
+		setCursor(width + 3, 9);
+		write(color("Damage: %-%\n", RED).c_str(), p.minDamage, p.maxDamage);
+		setCursor(width + 1, 10);
+		std::cout << "|                          |";
+		setCursor(width + 3, 10);
+		write(color("Defence: %\n", BLUE).c_str(), p.defence);
+		setCursor(width + 1, 11);
+		std::cout << "|                          |";
+		setCursor(width + 3, 11);
+		write(color("Speed: %\n", YELLOW).c_str(), (p.weapon != nullptr ? p.weapon->speed : 1));
+		setCursor(width + 1, 12);
+		std::cout << "============================";
+	}
+
+	void writeStats3() {
+		setCursor(width + 1, 14);
+		// Remove any character atrifacts that may appear
+		std::cout << "============================";
+		setCursor(width + 1, 15);
+		std::cout << "|                          |";
+		setCursor(width + 3, 15);
+		write(color("Floor: %\n", YELLOW).c_str(), p.curFloor);
+		setCursor(width + 1, 16);
+		std::cout << "|                          |";
+		setCursor(width + 3, 16);
+		write(color("X: %\n", WHITE).c_str(), p.x);
+		setCursor(width + 1, 17);
+		std::cout << "|                          |";
+		setCursor(width + 3, 17);
+		write(color("Y: %\n", WHITE).c_str(), p.y);
+		setCursor(width + 1, 18);
+		std::cout << "============================";
 	}
 
 	// Update board on player action
 	void movePlayer(char ch) {
-		int tileX = (int)p.x;
-		int tileY = (int)p.y;
 		TileType type = TileType::PLAY;
-		bool moved = false;
-		if ((ch == 'W' || ch == 'w' || ch == 72)) {
-			type = board[p.x][(int)p.y - 1].type;
-			tileY = p.y - 1;
-			moved = true;
-		}
-		if ((ch == 'A' || ch == 'a' || ch == 75)) {
-			type = board[(int)p.x - 1][p.y].type;
-			tileX = p.x - 1;
-			moved = true;
-		}
-		if ((ch == 'S' || ch == 's' || ch == 80)) {
-			type = board[p.x][(int)p.y + 1].type;
-			tileY = p.y + 1;
-			moved = true;
-		}
-		if ((ch == 'D' || ch == 'd' || ch == 77)) {
-			type = board[(int)p.x + 1][p.y].type;
-			tileX = p.x + 1;
-			moved = true;
-		}
+		int move = -1;
+		if ((ch == 'W' || ch == 'w' || ch == 72)) move = UP;
+		if ((ch == 'S' || ch == 's' || ch == 80)) move = DOWN;
+		if ((ch == 'A' || ch == 'a' || ch == 75)) move = LEFT;
+		if ((ch == 'D' || ch == 'd' || ch == 77)) move = RIGHT;
+		int tileX = (int)p.x + (int)dx[move];
+		int tileY = (int)p.y + (int)dy[move];
+		type = board[tileX][tileY].type;
 		// Press T to wait a turn
-		if ((ch == 'T' || ch == 't')) {
-			moved = true;
-		}
+		if ((ch == 'T' || ch == 't'))
+			move = -2;
 
-		std::shared_ptr<Item> item = board[tileX][tileY].item;
 		std::shared_ptr<Enemy> enemy = board[tileX][tileY].enemy;
+		if (move != -2) {
+			std::shared_ptr<Item> item = board[tileX][tileY].item;
 
-		// Interactions
-		switch (type) {
-		case TileType::ITEM:
-			board[tileX][tileY].interacted(&p);
-			startInfo();
-			if (item->count > 1)
-				write("Picked up % %", item->count, color(item->name, item->color));
-			else
-				write("Picked up %", color(item->name, item->color));
-			writeStats();
-		case TileType::EMPTY:
-			// Move player a tile
-			changeTile(p.x, p.y);
-			p.x = tileX;
-			p.y = tileY;
-			changeTile(p.x, p.y, TileType::PLAY);
-			break;
-		case TileType::ENEM:
-			// Fighting enemy
-			std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> results = board[tileX][tileY].interacted(&p);
-			std::array<int, 5> result  = results.first;
-			startInfo();
-			write("Dealt ");
-			write(color("% damage", RED).c_str(), result[0]);
-			write(" to ");
-			write(color("%", enemy->nameColor).c_str(), enemy->name);
-			if (enemy->health > 0) {
-				write(" in % hit(s)\nRecieved ", result[1]);
-				write(color("% damage", RED).c_str(), result[2]);
-				write(" in % hit(s).", result[3]);
+			// Interactions
+			switch (type) {
+			case TileType::ITEM:
+				board[tileX][tileY].interacted(&p);
+				startInfo();
+				if (item->count > 1)
+					write("Picked up % %", item->count, color(item->name, item->color));
+				else
+					write("Picked up %", color(item->name, item->color));
+				changeTile(tileX, tileY, Tile(p.curRoomNum));
+				writeStats();
+				writeStats3();
+				break;
+			case TileType::PATH:
+			case TileType::EMPTY:
+				// Move player a tile
+				moveEntity(p.x, p.y, move);
+				writeStats3();
+				break;
+			case TileType::DOOR:
+				startInfo();
+				p.x += dx[move] * 2;
+				p.y += dy[move] * 2;
+				if (board[p.x][p.y].type == TileType::PATH) {
+					changeTile(p.x, p.y, Tile(TileType::PLAY, p.curRoomNum));
+					board[tileX - dx[move]][tileY - dy[move]] = Tile(p.curRoomNum);
+					board[tileX][tileY].interacted(&p, 1);
+				}
+				else {
+					changeTile(p.x, p.y, Tile(TileType::PLAY, p.curRoomNum));
+					board[tileX - dx[move]][tileY - dy[move]] = Tile(TileType::PATH, p.curRoomNum, true);
+					board[tileX][tileY].interacted(&p);
+				}
+				drawBoard();
+				startInfo();
+				std::cout << p.curRoomNum;
+				writeStats3();
+				break;
+			case TileType::ENEM:
+				// Fighting enemy
+				std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> results = board[tileX][tileY].interacted(&p);
+				std::array<int, 5> result = results.first;
+				startInfo();
+				write("Dealt ");
+				write(color("% damage", RED).c_str(), result[0]);
+				write(" to ");
+				write(color("%", enemy->nameColor).c_str(), enemy->name);
+				if (enemy->health > 0) {
+					write(" in % hit(s)\nRecieved ", result[1]);
+					write(color("% damage", RED).c_str(), result[2]);
+					write(" in % hit(s).", result[3]);
+				}
+				else {
+					write(" in % hit(s) killing the enemy\nGained ", result[1]);
+					write(color("% experience", GREEN).c_str(), result[4]);
+					write(".");
+					changeTile(tileX, tileY);
+					enemies.erase(std::remove(enemies.begin(), enemies.end(), board[tileX][tileY].enemy), enemies.end());
+					for (std::shared_ptr<Item> i : results.second)
+						placeItem(i, tileX, tileY);
+				}
+				writeStats();
 			}
-			else {
-				write(" in % hit(s) killing the enemy\nGained ", result[1]);
-				write(color("% experience", GREEN).c_str(), result[4]);
-				write(".");
-				changeTile(tileX, tileY);
-				board[tileX][tileY].enemy = nullptr;
-				for (std::shared_ptr<Item> i : results.second)
-					placeItem(i, tileX, tileY);
-			}
-			writeStats();
 		}
 
-		if (moved)
+		for (int i = 0; i < 4; i++) {
+			int dX2 = p.x + dx[i];
+			int dY2 = p.y + dy[i];
+			if (isTileValid(dX2, dY2)) {
+				if (board[dX2][dY2].type == TileType::PATH || board[dX2][dY2].type == TileType::DOOR) {
+					board[dX2][dY2].isVisible = true;
+					drawTile(dX2, dY2);
+				}
+			}
+		}
+
+		if (move != -1)
 			moveEnemies(enemy);
 	}
 
 	int placeItem(std::shared_ptr<Item> item, int tileX, int tileY) {
 		if (board[tileX][tileY].type == TileType::EMPTY) {
-			changeTile(tileX, tileY, Tile(item));
+			changeTile(tileX, tileY, Tile(item, p.curRoomNum));
 			return 1;
 		}
 		else {
@@ -185,7 +478,7 @@ public:
 				if (isMoveValid(tileX, tileY, i)) {
 					tileY += dy[i];
 					tileX += dx[i];
-					changeTile(tileX, tileY, Tile(item));
+					changeTile(tileX, tileY, Tile(item, p.curRoomNum));
 					return 1;
 				}
 			for (int i = 0; i < 4; i++)
@@ -202,37 +495,24 @@ public:
 		for (int i = 0; i < enemies.size(); i++) {
 			std::shared_ptr<Enemy> e = enemies[i];
 			int dist = distance(e->x, e->y, p.x, p.y);
-			if (e->health <= 0) {
-				enemies.erase(enemies.begin() + i);
-				continue;
-			}
-			if (dist > e->sight) {
+			int move = -1;
+			if (dist > e->sight || p.curRoomNum != e->roomNum) {
 				int d = rand() % 4;
-				if (isMoveValid(e->x, e->y, d)) {
-					swapTile(e->x, e->y, d);
-					e->x += dx[d];
-					e->y += dy[d];
-				}
+				if (isMoveEnemyValid(e->x, e->y, d))
+					move = d;
 			}
-			else if(dist > 1) {
-				if (p.y < e->y && isMoveNotWall(e->x, e->y, UP)) {
-					swapTile(e->x, e->y, UP);
-					e->y += dy[UP];
-				}
-				else if (p.y > e->y && isMoveNotWall(e->x, e->y, DOWN)) {
-					swapTile(e->x, e->y, DOWN);
-					e->y += dy[DOWN];
-				}
-				else if (p.x < e->x && isMoveNotWall(e->x, e->y, LEFT)) {
-					swapTile(e->x, e->y, LEFT);
-					e->x += dx[LEFT];
-				}
-				else if (p.x > e->x && isMoveNotWall(e->x, e->y, RIGHT)) {
-					swapTile(e->x, e->y, RIGHT);
-					e->x += dx[RIGHT];
-				}
+			else if(dist > 1 && p.curRoomNum == e->roomNum) {
+				if (p.y < e->y && isMoveEnemyValid(e->x, e->y, UP))
+					move = UP;
+				else if (p.y > e->y && isMoveEnemyValid(e->x, e->y, DOWN))
+					move = DOWN;
+				else if (p.x < e->x && isMoveEnemyValid(e->x, e->y, LEFT))
+					move = LEFT;
+				else if (p.x > e->x && isMoveEnemyValid(e->x, e->y, RIGHT))
+					move = RIGHT;
 			}
-			else if(e != fought) {
+			else if(e != fought && p.curRoomNum == e->roomNum) {
+				move = -1;
 				// Enemy attacks
 				std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> results = e->attacked(&p, true);
 				std::array<int, 5> result = results.first;
@@ -249,11 +529,17 @@ public:
 					write(color("% experience", GREEN).c_str(), result[4]);
 					write(".");
 					changeTile(e->x, e->y);
+					enemies.erase(enemies.begin() + i);
+					for (std::shared_ptr<Item> i : results.second)
+						placeItem(i, e->x, e->y);
 				}
-				else 
+				else
 					write(".");
 				writeStats();
 
+			}
+			if (move != -1) {
+				moveEntity(e->x, e->y, move);
 			}
 		}
 	}
@@ -265,69 +551,100 @@ private:
 	Player& p;
 
 	void drawTile(size_t x, size_t y) {
-		moveCursor(x, y);
-		board[x][y].draw();
+		setCursor(x, y);
+		board[x][y].draw(&p);
 	}
 
 	void startInfo() {
 		for(int i = 0; i < 10; i++)
 			clearLine(height+i);
-		moveCursor(0, height);
+		setCursor(0, height - 1);
+		for(int i = 0; i < width; i++)
+			std::cout << "=";
+		setCursor(0, height);
 	}
 
 	// Set tile as empty if tile not specified
 	void changeTile(int x, int y) {
-		board[x][y] = Tile();
-		drawTile(x, y);
+		changeTile(x, y, Tile(-1));
 	}
 
 	// Replace tile with a different tile
 	void changeTile(int x, int y, Tile tile) {
+		int num = tile.roomNum;
+		if (tile.type != TileType::PLAY && tile.roomNum == -1) {
+			num = board[x][y].roomNum;
+			tile.roomNum = num;
+		}
 		board[x][y] = tile;
 		drawTile(x, y);
 	}
 
 	// Swap spots of two tiles
-	void swapTile(int x, int y, int x2, int y2) {
+	void swapTile(int x, int y, int x2, int y2, bool directSwap) {
+		Tile t1 = board[x][y];
+		Tile t2 = board[x2][y2];
 		std::shared_ptr<Item> i = board[x][y].item;
 		std::shared_ptr<Enemy> e = board[x][y].enemy;
 		std::shared_ptr<Item> i2 = board[x2][y2].item;
 		std::shared_ptr<Enemy> e2 = board[x2][y2].enemy;
 
 		if (i != nullptr)
-			board[x2][y2] = Tile(i);
-		else if (e != nullptr)
-			board[x2][y2] = Tile(e);
+			board[x2][y2] = Tile(i, t1.roomNum);
+		else if (e != nullptr) {
+			board[x2][y2] = Tile(e, t1.roomNum);
+		}
 		else
-			board[x2][y2] = Tile();
+			board[x2][y2] = t1;
 
 		if (i2 != nullptr)
-			board[x][y] = Tile(i2);
-		else if (e2 != nullptr)
-			board[x][y] = Tile(e2);
+			board[x][y] = Tile(i2, t2.roomNum);
+		else if (e2 != nullptr) {
+			board[x][y] = Tile(e2, t2.roomNum);
+			e2->x = x;
+			e2->y = y;
+		}
 		else
-			board[x][y] = Tile();
+			board[x][y] = t2;
 
 		drawTile(x, y);
 		drawTile(x2, y2);
 	}
 
-	void swapTile(int x, int y, int d) {
-		int dX = x + dx[d], dY = y + dy[d];
-		swapTile(x, y, dX, dY);
+	void swapTile(int x, int y, int d, int numOfTiles = 1) {
+		int dX = x + dx[d] * numOfTiles, dY = y + dy[d] * numOfTiles;
+		swapTile(x, y, dX, dY, true);
 	}
 
 	bool isTileValid(int x, int y) {
-		return x >= 0 && y >= 0 && x < width&& y < height;
+		return x >= 0 && y >= 0 && x < width && y < height;
 	}
 
 	// 0 - Up, 1 - Down, 2 - Left, 3 - Right
 	bool isMoveValid(int x, int y, int d) {
-		return (isTileValid(x + dx[d], y + dy[d]) && board[x + dx[d]][y + dy[d]].type == TileType::EMPTY);
+		int dX = x + dx[d];
+		int dY = y + dy[d];
+		return (isTileValid(dX, dY) && board[dX][dY].type == TileType::EMPTY);
 	}
 
-	bool isMoveNotWall(int x, int y, int d) {
-		return (isTileValid(x + dx[d], y + dy[d]) && board[x + dx[d]][y + dy[d]].type != TileType::WALL);
+	bool isMoveEnemyValid(int x, int y, int d) {
+		int dX = x + dx[d];
+		int dY = y + dy[d];
+		TileType type = board[dX][dY].type;
+		bool isTypeValid = (type != TileType::DOOR && type != TileType::WALL && type != TileType::VOID && type != TileType::ENEM);
+		for (int i = 0; i < 4; i++) {
+			int dX2 = dX + dx[d];
+			int dY2 = dY + dy[d];
+			if (isTileValid(dX2, dY2) && board[dX2][dY2].type == TileType::DOOR)
+				isTypeValid = false;
+		}
+		return (isTypeValid && isTileValid(dX, dY));
+	}
+
+	void moveEntity(int& x, int& y, int d, int numOfTiles = 1) {
+		swapTile(x, y, d, numOfTiles);
+		x += dx[d] * numOfTiles;
+		y += dy[d] * numOfTiles;
 	}
 };
 

@@ -10,8 +10,8 @@ public:
 	unsigned char nameColor = BLUE;
 	unsigned char color = RED;
 	int health = 10;
-	int minDamage = 5;
-	int maxDamage = 10;
+	int minDamage = 4;
+	int maxDamage = 6;
 	int defence = 0;
 	int minGold = 10;
 	int maxGold = 50;
@@ -21,9 +21,10 @@ public:
 	int sight = 8;
 	int x = 1;
 	int y = 1;
+	int roomNum = 0;
 
 	Enemy() {}
-	Enemy(int x, int y) : x(x), y(y) {}
+	Enemy(int x, int y, int roomNum) : x(x), y(y), roomNum(roomNum) {}
 
 	int hit(int dmg) {
 		health -= std::max<int>(dmg - defence, dmg / 4);
@@ -100,6 +101,17 @@ public:
 	}
 };
 
+class Skeleton : public Enemy {
+public:
+	Skeleton(int xC, int yC, int num) {
+		x = xC;
+		y = yC;
+		roomNum = num;
+		name = "Skeleton";
+		nameColor = GREY;
+	}
+
+};
 
 
 
