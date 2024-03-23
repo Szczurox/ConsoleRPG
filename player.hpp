@@ -40,14 +40,14 @@ public:
 			choice = menu.open();
 			if (choice == 0 && options.size() == 3)
 				return used(p);
-			if (choice == 1 || (choice == 0 && options.size() == 2)) {
+			if ((choice == 1 && options.size() == 3) || (choice == 0 && options.size() == 2)) {
 				MenuItem option("Are you sure you want to destroy this item?", RED);
 				MenuItem no("No", WHITE);
 				MenuItem yes("Yes", WHITE);
 				std::vector<MenuItem> options({ no, yes });
 				Menu deleteMenu(&options, option);
 				int confirmation = deleteMenu.open();
-				if (confirmation == 0)
+				if (confirmation != 1)
 					choice = -2;
 				else {
 					onRemove(p);

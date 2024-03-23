@@ -194,16 +194,31 @@ public:
 	int movePlayer(char ch) {
 		TileType type = TileType::PLAY;
 		int move = -1;
-		if ((ch == 'W' || ch == 'w' || ch == 72)) move = UP;
-		if ((ch == 'S' || ch == 's' || ch == 80)) move = DOWN;
-		if ((ch == 'A' || ch == 'a' || ch == 75)) move = LEFT;
-		if ((ch == 'D' || ch == 'd' || ch == 77)) move = RIGHT;
+		if ((ch == 'W' || ch == 'w')) move = UP;
+		else if ((ch == 'S' || ch == 's')) move = DOWN;
+		else if ((ch == 'A' || ch == 'a')) move = LEFT;
+		else if ((ch == 'D' || ch == 'd')) move = RIGHT;
+		else if ((ch == 'T' || ch == 't'))
+			move = -2;
+		else
+			switch (_getch()) {
+			case 72:
+				move = UP;
+				break;
+			case 80:
+				move = DOWN;
+				break;
+			case 77:
+				move = RIGHT;
+				break;
+			case 75:
+				move = LEFT;
+				break;
+			}
 		int tileX = p.x + dx[move];
 		int tileY = p.y + dy[move];
 		type = board[tileX][tileY].type;
 		// Press T to wait a turn
-		if ((ch == 'T' || ch == 't'))
-			move = -2;
 
 		std::shared_ptr<Enemy> enemy = board[tileX][tileY].enemy;
 		if (move != -2) {

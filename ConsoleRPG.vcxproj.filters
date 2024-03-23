@@ -38,7 +38,7 @@
     <ClInclude Include="enemy.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="rooms.hpp">
+    <ClInclude Include="tiles.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
