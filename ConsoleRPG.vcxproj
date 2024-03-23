@@ -149,6 +149,7 @@
     <ClInclude Include="items.hpp" />
     <ClInclude Include="player.hpp" />
     <ClInclude Include="menu.hpp" />
+    <ClInclude Include="rooms.hpp" />
     <ClInclude Include="utils.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

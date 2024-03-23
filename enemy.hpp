@@ -17,7 +17,7 @@ public:
 	int maxGold = 50;
 	int level = 0;
 	int speed = 1;
-	int exp = 10;
+	int xp = 10;
 	int sight = 8;
 	int x = 1;
 	int y = 1;
@@ -43,7 +43,7 @@ public:
 
 	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>>attacked(Player* p, bool first = false) {
 		// Player dmg, number of player attacks, enemy dmg, number of enemy attacks
-		std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> attacks({ 0, 1, 0, 1, exp }, {});
+		std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> attacks({ 0, 1, 0, 1, xp }, {});
 		int pSpeed;
 		if (p->weapon == nullptr) pSpeed = 1;
 		else pSpeed = p->weapon->speed;
@@ -93,7 +93,8 @@ public:
 		}
 
 		if (health <= 0) {
-			p->exp += exp;
+			p->xp += xp;
+			p->checkLevelUp();
 			attacks.second = getLoot();
 		}
 
@@ -109,6 +110,7 @@ public:
 		roomNum = num;
 		name = "Skeleton";
 		nameColor = GREY;
+		xp = 10;
 	}
 
 };

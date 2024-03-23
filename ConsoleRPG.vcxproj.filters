@@ -38,5 +38,8 @@
     <ClInclude Include="enemy.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="rooms.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
