@@ -1,4 +1,4 @@
-#ifndef ITEMS
+﻿#ifndef ITEMS
 #define ITEMS
 
 class Weapon : public Item {
@@ -28,16 +28,16 @@ public:
 	virtual int itemMenu(Player* p) {
 		MenuItem nameI(name, color);
 		MenuItem loreI(lore, WHITE);
-		char s[256];
-		sprintf_s(s, "Deals %d-%d damage and has %d speed", minDmg, maxDmg, speed);
+		wchar_t s[256];
+		wsprintf(s, L"Deals %d-%d damage and has %d speed", minDmg, maxDmg, speed);
 		MenuItem damage(s, YELLOW);
-		char d[256];
-		sprintf_s(d, "Durability: %d/%d", durability, maxDurability);
+		wchar_t d[256];
+		wsprintf(d, L"Durability: %d/%d", durability, maxDurability);
 		MenuItem dur(d, BRIGHT_BLUE);
 		std::vector<MenuItem> texts({ nameI, loreI, damage, dur });
 		if (p->level < reqLevel) {
-			char e[256];
-			sprintf_s(e, "Required Level: %d", reqLevel);
+			wchar_t e[256];
+			wsprintf(e, L"Required Level: %d", reqLevel);
 			texts.push_back(MenuItem(e, RED));
 		}
 
@@ -45,13 +45,13 @@ public:
 		if (p->level >= reqLevel) {
 			MenuItem equip;
 			if (p->armor.get() != this) 
-				equip = MenuItem("Equip", BRIGHT_GREEN);
+				equip = MenuItem(L"Equip", BRIGHT_GREEN);
 			else 
-				equip = MenuItem("Unequip", BRIGHT_GREEN);
+				equip = MenuItem(L"Unequip", BRIGHT_GREEN);
 			options.push_back(equip);
 		}
-		options.push_back(MenuItem("Destroy", RED));
-		options.push_back(MenuItem("Back", WHITE));
+		options.push_back(MenuItem(L"Destroy", RED));
+		options.push_back(MenuItem(L"Back", WHITE));
 
 		return menuHandle(p, options, texts);
 	}
@@ -83,16 +83,16 @@ public:
 	virtual int itemMenu(Player* p) {
 		MenuItem nameI(name, color);
 		MenuItem loreI(lore, WHITE);
-		char s[256];
-		sprintf_s(s, "Gives you %d defence", prot);
+		wchar_t s[256];
+		wsprintf(s, L"Gives you %d defence", prot);
 		MenuItem prot(s, YELLOW);
-		char d[256];
-		sprintf_s(d, "Durability: %d/%d", durability, maxDurability);
+		wchar_t d[256];
+		wsprintf(d, L"Durability: %d/%d", durability, maxDurability);
 		MenuItem dur(d, BRIGHT_BLUE);
 		std::vector<MenuItem> texts({ nameI, loreI, prot, dur });
 		if (p->level < reqLevel) {
-			char e[256];
-			sprintf_s(e, "Required Level: %d", reqLevel);
+			wchar_t e[256];
+			wsprintf(e, L"Required Level: %d", reqLevel);
 			texts.push_back(MenuItem(e, RED));
 		}
 
@@ -100,13 +100,13 @@ public:
 		if (p->level >= reqLevel) {
 			MenuItem equip;
 			if (p->armor.get() != this)
-				equip = MenuItem("Equip", BRIGHT_GREEN);
+				equip = MenuItem(L"Equip", BRIGHT_GREEN);
 			else
-				equip = MenuItem("Unequip", BRIGHT_GREEN);
+				equip = MenuItem(L"Unequip", BRIGHT_GREEN);
 			options.push_back(equip);
 		}
-		options.push_back(MenuItem("Destroy", RED));
-		options.push_back(MenuItem("Back", WHITE));
+		options.push_back(MenuItem(L"Destroy", RED));
+		options.push_back(MenuItem(L"Back", WHITE));
 
 		return menuHandle(p, options, texts);
 	}
@@ -130,14 +130,14 @@ public:
 	virtual int itemMenu(Player* p) {
 		MenuItem nameI(name, color);
 		MenuItem loreI(lore, WHITE);
-		char d[256];
-		sprintf_s(d, "Amount: %d", count);
+		wchar_t d[256];
+		wsprintf(d, L"Amount: %d", count);
 		MenuItem coun(d, BRIGHT_BLUE);
 		std::vector<MenuItem> texts({ nameI, loreI, coun });
 
-		MenuItem use("Use", BRIGHT_GREEN);
-		MenuItem remove("Destroy", RED);
-		MenuItem back("Back", WHITE);
+		MenuItem use(L"Use", BRIGHT_GREEN);
+		MenuItem remove(L"Destroy", RED);
+		MenuItem back(L"Back", WHITE);
 		std::vector<MenuItem> options({ use, remove, back });
 
 		return menuHandle(p, options, texts);
@@ -150,7 +150,7 @@ class GoldPile : public Item {
 public:
 	GoldPile(int minGold, int maxGold) {
 		type = ItemType::RESOURCE;
-		name = "gold";
+		name = L"gold";
 		count = randMinMax(minGold, maxGold);
 	}
 
@@ -165,10 +165,10 @@ public:
 class WoodenSword : public Weapon {
 public:
 	WoodenSword(int dur = 100) {
-		name = "Wooden Sword";
-		lore = "Basic wooden sword";
+		name = L"Wooden Sword";
+		lore = L"Basic wooden sword";
 		color = GREY;
-		symbol = "|";
+		symbol = L"┼";
 		minDmg = 3;
 		maxDmg = 5;
 		speed = 1;
@@ -181,10 +181,10 @@ public:
 class IronShortSword : public Weapon {
 public:
 	IronShortSword(int dur = 200) {
-		name = "Iron Shortsword";
-		lore = "Quick weapon";
+		name = L"Iron Shortsword";
+		lore = L"Quick weapon";
 		color = BRIGHT_BLUE;
-		symbol = "|";
+		symbol = L"┼";
 		minDmg = 3;
 		maxDmg = 8;
 		speed = 2;
@@ -199,10 +199,10 @@ public:
 class Gambeson : public Armor {
 public:
 	Gambeson(int dur) {
-		name = "Gambeson";
-		lore = "Basic padded cloth armor";
+		name = L"Gambeson";
+		lore = L"Basic padded cloth armor";
 		color = GREY;
-		symbol = "O";
+		symbol = L"O";
 		prot = 2;
 		reqLevel = 0;
 		durability = dur;
@@ -218,15 +218,14 @@ public:
 		p->health += 100;
 		if (p->health > p->maxHealth) p->health = p->maxHealth;
 		p->removeItem(name, 1);
-		if(count == 1) count--;
 		return 5;
 	}
 
 	HealthPotion() {
-		name = "Health Potion";
-		lore = "Heals 100 HP";
+		name = L"Health Potion";
+		lore = L"Heals 100 HP";
 		color = BRIGHT_BLUE;
-		symbol = "\36";
+		symbol = L"▲";
 		reqLevel = 0;
 	}
 };

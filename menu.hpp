@@ -1,10 +1,10 @@
-#ifndef MENU
+﻿#ifndef MENU
 #define MENU
 
 struct MenuItem {
-	const char* text;
+	const wchar_t* text;
 	unsigned char color;
-	MenuItem(const char* text = "", unsigned char color = WHITE) : text(text), color(color) {};
+	MenuItem(const wchar_t* text = L"", unsigned char color = WHITE) : text(text), color(color) {};
 };
 
 class Menu {
@@ -62,7 +62,7 @@ private:
 			int size = 0;
 			while (m.text[size] != '\0') size++;
 			setCursor((B_WIDTH - 10) / 2 - size / 2, i);
-			printf("  \033[97;%dm%s\033[m\n\033[?25l", m.color, m.text);
+			wprintf(L"  \033[97;%dm%ls\033[m\n\033[?25l", m.color, m.text);
 		}
 		// Render menu elements
 		for (int i = 0; i < opts->size(); i++) {
@@ -70,12 +70,12 @@ private:
 			int size = 0;
 			while (m.text[size] != '\0') size++;
 			setCursor((B_WIDTH - 10) / 2 - size / 2, i + textsLeng + (space ? 1 : 0));
-			printf("\033[97;%dm%s%s%s\033[m\n", m.color, i == option ? "> " : "  ", m.text, i == option ? " <" : "");
+			wprintf(L"\033[97;%dm%ls%ls%ls\033[m\n", m.color, i == option ? L"> " : L"  ", m.text, i == option ? L" <" : L"");
 		}
 		// If menu is empty write (empty), empty inventory
 		if ((int)opts->size() <= 0) {
 			setCursor((B_WIDTH - 10) / 2 - 3, textsLeng);
-			printf("\033[97;%dm(empty)\033[m\n\033[?25l", WHITE);
+			wprintf(L"\033[97;%dm(empty)\033[m\n\033[?25l", WHITE);
 		}
 	}
 
@@ -88,9 +88,9 @@ private:
 		int size2 = 0;
 		while (m.text[size2] != '\0') size2++;
 		setCursor((B_WIDTH - 10) / 2 - size / 2, texts->size() + prev + (space ? 1 : 0));
-		printf("\x1b[2K\033[97;%dm%s%s%s\033[m", n.color, "  ", n.text, " ");
+		wprintf(L"\x1b[2K\033[97;%dm%ls%ls%ls\033[m", n.color, L"  ", n.text, L" ");
 		setCursor((B_WIDTH - 10) / 2 - size2 / 2, texts->size() + option + (space ? 1 : 0));
-		printf("\x1b[2K\033[97;%dm%s%s%s\033[m", m.color, "> ", m.text, " <");
+		wprintf(L"\x1b[2K\033[97;%dm%ls%ls%ls\033[m", m.color, L"> ", m.text, L" <");
 	}
 };
 

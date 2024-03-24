@@ -1,12 +1,12 @@
-#ifndef ENEMY
+﻿#ifndef ENEMY
 #define ENEMY
 
 class Tile;
 
 class Enemy {
 public:
-	const char* name = "Enemy";
-	const char* symbol = "\2";
+	const wchar_t* name = L"Enemy";
+	const wchar_t* symbol = L"☺";
 	unsigned char nameColor = BLUE;
 	unsigned char color = RED;
 	int health = 10;
@@ -63,7 +63,7 @@ public:
 		else if (pSpeed > speed) {
 			attacks.first[1] = 0;
 			// Player attacks playerSpeed - enemySpeed amount of times
-			for (int i = speed; i < pSpeed; i++) {
+			for (int i = speed; i <= pSpeed; i++) {
 				int playerDmg = p->attack();
 				hit(playerDmg);
 				attacks.first[0] += playerDmg;
@@ -73,17 +73,17 @@ public:
 			int enemyDmg = attack();
 			if (health > 0 || first) {
 				p->hit(attack());
-				attacks.first[1] += enemyDmg;
+				attacks.first[2] += enemyDmg;
 			}
 		}
 		// Enemy is faster
 		else {
 			attacks.first[3] = 0;
 			// Enemy attacks enemySpeed - playerSpeed amount of times
-			for (int i = pSpeed; i < speed; i++) {
+			for (int i = pSpeed; i <= speed; i++) {
 				int enemyDmg = attack();
 				p->hit(attack());
-				attacks.first[1] += enemyDmg;
+				attacks.first[2] += enemyDmg;
 				attacks.first[3]++;
 			}
 			// Player attacks once if alive
@@ -108,9 +108,29 @@ public:
 		x = xC;
 		y = yC;
 		roomNum = num;
-		name = "Skeleton";
+		name = L"Skeleton";
 		nameColor = GREY;
+		color = WHITE;
 		xp = 10;
+		health = 10;
+		minDamage = 4;
+		maxDamage = 6;
+	}
+};
+
+class Zombie : public Enemy {
+public:
+	Zombie(int xC, int yC, int num) {
+		x = xC;
+		y = yC;
+		roomNum = num;
+		health = 20;
+		minDamage = 1;
+		maxDamage = 3;
+		name = L"Zombie";
+		nameColor = GREY;
+		color = GREEN;
+		xp = 20;
 	}
 
 };

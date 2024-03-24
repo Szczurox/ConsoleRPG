@@ -1,3 +1,4 @@
+#include<Windows.h>
 #include<vector>
 #include<cstdlib>
 #include<iostream>
@@ -9,8 +10,10 @@
 #include<array>
 #include<memory>
 #include<algorithm>
+#include<fcntl.h>
+#include<io.h>
 
-#define B_HEIGHT 24
+#define B_HEIGHT 23
 #define B_WIDTH 90
 
 #include"utils.hpp"
@@ -29,21 +32,19 @@ bool drawDeadMenu();
 void infoMenu();
 
 int main() {
-	// Hide the console cursor
-	std::cout << "\033[?25l";
+	_setmode(_fileno(stdout), _O_U8TEXT);
 	srand((unsigned int)time(NULL));
-	char s[256];
-	sprintf_s(s, "MODE %d,%d", (int)B_WIDTH, (int)B_HEIGHT);
-	system(s);
-
+	setWindow((int)B_WIDTH, (int)B_HEIGHT);
+	// Hide the console cursor
+	std::wcout << L"\033[?25l";
 	// Clear the entire screen
 	system("cls");
 
-	MenuItem title("Console RPG", BRIGHT_CYAN);
-	MenuItem newGame("New Game", BRIGHT_GREEN);
-	MenuItem loadSave("Load Save", YELLOW);
-	MenuItem info("Info", BRIGHT_BLUE);
-	MenuItem exit("Exit", RED);
+	MenuItem title(L"Console RPG", BRIGHT_CYAN);
+	MenuItem newGame(L"New Game", BRIGHT_GREEN);
+	MenuItem loadSave(L"Load Save", YELLOW);
+	MenuItem info(L"Info", BRIGHT_BLUE);
+	MenuItem exit(L"Exit", RED);
 	std::vector<MenuItem> mainOpts = { newGame, loadSave, info, exit };
 	Menu mainMenu(&mainOpts, title);
 
@@ -80,10 +81,7 @@ int startGame() {
 	isRunning = true;
 	bool isOnCurrentBoard = true;
 
-	char s[256];
-	sprintf_s(s, "MODE %d,%d", (int)B_WIDTH + 50, (int)B_HEIGHT + 10);
-	system(s);
-
+	setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
 	system("cls");
 
 	// Player Variables
@@ -96,10 +94,9 @@ int startGame() {
 		Board b(B_WIDTH, B_HEIGHT, p);
 		boards.push_back(b);
 		boards[p.curFloor].boardInit();
-		boards[p.curFloor].drawBoard();
+		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1) {
-			boards[p.curFloor].startInfo();
-			write(color("Version: 0.0.5\nSaving system isn't functional yet.", YELLOW).c_str());
+			write(color(L"Version: 0.0.5\nSaving system isn't functional yet.", YELLOW).c_str());
 		}
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
@@ -109,20 +106,16 @@ int startGame() {
 
 					// Esc
 					if (ch == 27) {
-						sprintf_s(s, "MODE %d,%d", (int)B_WIDTH, (int)B_HEIGHT);
-						system(s);
+						setWindow((int)B_WIDTH, (int)B_HEIGHT);
 						drawEscMenu();
-						sprintf_s(s, "MODE %d,%d", (int)B_WIDTH + 50, (int)B_HEIGHT + 10);
-						system(s);
-						boards[p.curFloor].drawBoard();
+						setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
+						boards[p.curFloor].drawBoardFull();
 					}
 					else if (ch == 'I' || ch == 'i') {
-						sprintf_s(s, "MODE %d,%d", (int)B_WIDTH, (int)B_HEIGHT);
-						system(s);
+						setWindow((int)B_WIDTH, (int)B_HEIGHT);
 						p.showInventory();
-						sprintf_s(s, "MODE %d,%d", (int)B_WIDTH + 50, (int)B_HEIGHT + 10);
-						system(s);
-						boards[p.curFloor].drawBoard();
+						setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
+						boards[p.curFloor].drawBoardFull();
 					}
 					else { 
 						int res = boards[p.curFloor].movePlayer(ch); 
@@ -151,16 +144,16 @@ int startGame() {
 }
 
 int drawEscMenu() {
-	MenuItem title("", BRIGHT_CYAN);
-	MenuItem back("Back To Game", BRIGHT_GREEN);
-	MenuItem save("Save Game", YELLOW);
-	MenuItem info("Info", BRIGHT_BLUE);
-	MenuItem exit("Leave Game", RED);
+	MenuItem title(L"", BRIGHT_CYAN);
+	MenuItem back(L"Back To Game", BRIGHT_GREEN);
+	MenuItem save(L"Save Game", YELLOW);
+	MenuItem info(L"Info", BRIGHT_BLUE);
+	MenuItem exit(L"Leave Game", RED);
 	std::vector<MenuItem> mainOpts = { back, save, info, exit };
 	Menu escMenu(&mainOpts, title);
 
 	int choice = 0;
-	while (choice != -1) {
+	while (choice != -1 && isRunning) {
 		choice = escMenu.open();
 		switch (choice)
 		{
@@ -171,15 +164,15 @@ int drawEscMenu() {
 			break;
 		case 3:
 		{
-			MenuItem option("Are you sure you want to leave?", RED);
-			MenuItem option2("All unsaved progress will be lost!", RED);
-			MenuItem no("No", WHITE);
-			MenuItem yes("Yes", WHITE);
+			MenuItem option(L"Are you sure you want to leave?", RED);
+			MenuItem option2(L"All unsaved progress will be lost!", RED);
+			MenuItem no(L"No", WHITE);
+			MenuItem yes(L"Yes", WHITE);
 			std::vector<MenuItem> options({ no, yes });
 			std::vector<MenuItem> texts({ option, option2 });
 			Menu sureMenu(&options, &texts);
 			int ch = sureMenu.open();
-			if (ch)
+			if (ch == 1)
 				isRunning = false;
 			break;
 		}
@@ -192,9 +185,9 @@ int drawEscMenu() {
 }
 
 bool drawDeadMenu() {
-	MenuItem title("Game Over\n", RED);
-	MenuItem back("Back To Main Menu", GREEN);
-	MenuItem exit("Leave Game", RED);
+	MenuItem title(L"Game Over\n", RED);
+	MenuItem back(L"Back To Main Menu", GREEN);
+	MenuItem exit(L"Leave Game", RED);
 	std::vector<MenuItem> mainOpts = { back, exit };
 	Menu escMenu(&mainOpts, title);
 
@@ -202,13 +195,13 @@ bool drawDeadMenu() {
 }
 
 void infoMenu() {
-	MenuItem text("W / Up Arrow - Up", WHITE);
-	MenuItem text2("S / Down Arrow - Down", WHITE);
-	MenuItem text3("A / Left Arrow - Left", WHITE);
-	MenuItem text4("D / Right Arrow - Right", WHITE);
-	MenuItem text5("E - Inventory", WHITE);
-	MenuItem text6("Esc - Back / Open Escape Menu", WHITE);
-	MenuItem back("Back", WHITE);
+	MenuItem text(L"W / Up Arrow - Up", WHITE);
+	MenuItem text2(L"S / Down Arrow - Down", WHITE);
+	MenuItem text3(L"A / Left Arrow - Left", WHITE);
+	MenuItem text4(L"D / Right Arrow - Right", WHITE);
+	MenuItem text5(L"E - Inventory", WHITE);
+	MenuItem text6(L"Esc - Back / Open Escape Menu", WHITE);
+	MenuItem back(L"Back", WHITE);
 	std::vector<MenuItem> options({ back });
 	std::vector<MenuItem> texts({ text, text2, text3, text4, text5, text6 });
 	Menu infoMenu(&options, &texts, true);

@@ -36,49 +36,49 @@ enum Colors {
 	BRIGHT_WHITE = 97,
 };
 
-void writeColor(const char* text, unsigned char color = WHITE) {
-	printf("\033[97;%dm%s\033[m\033[?25l", color, text);
+void writeColor(const wchar_t* text, unsigned char color = WHITE) {
+	std::wprintf(L"\033[97;%dm%ls\033[m\033[?25l", color, text);
 }
 
-std::stringstream colorTextStream(const char* text, int color = GREEN) {
-	std::stringstream ss;
-	ss << "\033[97;" << (int)color << "m" << text << "\033[m\033[?25l";
+std::wstringstream colorTextStream(const wchar_t* text, int color = GREEN) {
+	std::wstringstream ss;
+	ss << L"\033[97;" << (int)color << L"m" << text << L"\033[m\033[?25l";
 	return ss;
 }
 
-std::stringstream mergeTextStream(const char* text, const char* text2) {
-	std::stringstream ss;
+std::wstringstream mergeTextStream(const wchar_t* text, const wchar_t* text2) {
+	std::wstringstream ss;
 	ss << text << text2;
 	return ss;
 }
 
-std::string color(const char* text, unsigned char color = RED) {
+std::wstring color(const wchar_t* text, unsigned char color = RED) {
 	return colorTextStream(text, color).str();
 }
 
-void write(const char* format) {
-	std::cout << format;
+void write(const wchar_t* format) {
+	std::wcout << format;
 }
 
 template<typename T, typename ... Args>
-void write(const char* format, T value, Args ... args) {
+void write(const wchar_t* format, T value, Args ... args) {
 	for (; *format != '\0'; format++) {
 		if (*format == '%') {
-			std::cout << value;
+			std::wcout << value;
 			write(format + 1, args ...);
 			return;
 		}
-		std::cout << *format;
+		std::wcout << *format;
 	}
 }
 
 void setCursor(int col, int row) {
-	printf("\033[%d;%dH\033[?25l", (int)row + 1, (int)col + 1);
+	std::wprintf(L"\033[%d;%dH\033[?25l", (int)row + 1, (int)col + 1);
 }
 
 void clearLine(int row) {
 	setCursor(0, row);
-	std::cout << "\x1b[2K";
+	std::wcout << L"\x1b[2K";
 }
 
 int randMinMax(int min, int max) {
@@ -88,5 +88,22 @@ int randMinMax(int min, int max) {
 int distance(int x, int y, int x2, int y2) {
 	return (int)sqrtf((float)((y - y2) * (y - y2) + (x - x2) * (x - x2)));
 };
+
+void setWindow(int width, int height) {
+	_COORD coord;
+	coord.X = width;
+	coord.Y = height;
+
+	_SMALL_RECT rect;
+	rect.Top = 0;
+	rect.Left = 0;
+	rect.Bottom = height - 1;
+	rect.Right = width - 1;
+
+	HANDLE Handle = GetStdHandle(STD_OUTPUT_HANDLE);   // Get Handle 
+	SetConsoleScreenBufferSize(Handle, coord);         // Set Buffer Size 
+	SetConsoleWindowInfo(Handle, TRUE, &rect);         // Set Window Size 
+	ShowScrollBar(GetConsoleWindow(), SB_BOTH, 0);     // Hide Scrollbar
+}
 
 #endif // !UTILS

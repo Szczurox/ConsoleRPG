@@ -1,4 +1,4 @@
-#ifndef PLAYER
+﻿#ifndef PLAYER
 #define PLAYER
 
 class Player;
@@ -12,9 +12,9 @@ enum class ItemType {
 
 class Item : std::enable_shared_from_this<Item> {
 public:
-	const char* name = "";
-	const char* symbol = "@";
-	const char* lore = "";
+	const wchar_t* name = L"";
+	const wchar_t* symbol = L"@";
+	const wchar_t* lore = L"";
 	ItemType type = ItemType::RESOURCE;
 	int count = 0;
 	int minDmg = 0;
@@ -28,7 +28,7 @@ public:
 	unsigned char color = YELLOW;
 	bool stackable = true;
 	Item() {}
-	Item(const char* name, ItemType type, const char* symbol = "@", unsigned char color = YELLOW) : name(name), type(type) {}
+	Item(const wchar_t* name, ItemType type, const wchar_t* symbol = L"@", unsigned char color = YELLOW) : name(name), type(type) {}
 	// 1 - Add to inventory
 	virtual int picked(Player* player) { return 1; }
 	// 1 - Weapon, 2 - Armor
@@ -41,9 +41,9 @@ public:
 			if (choice == 0 && options.size() == 3)
 				return used(p);
 			if ((choice == 1 && options.size() == 3) || (choice == 0 && options.size() == 2)) {
-				MenuItem option("Are you sure you want to destroy this item?", RED);
-				MenuItem no("No", WHITE);
-				MenuItem yes("Yes", WHITE);
+				MenuItem option(L"Are you sure you want to destroy this item?", RED);
+				MenuItem no(L"No", WHITE);
+				MenuItem yes(L"Yes", WHITE);
 				std::vector<MenuItem> options({ no, yes });
 				Menu deleteMenu(&options, option);
 				int confirmation = deleteMenu.open();
@@ -63,7 +63,7 @@ public:
 
 class Player {
 public:
-	std::map<std::string, std::shared_ptr<Item>> inv;
+	std::map<std::wstring, std::shared_ptr<Item>> inv;
 	std::shared_ptr<Item> weapon = nullptr;
 	std::shared_ptr<Item> armor = nullptr;
 	const int maxInvSpace = 32;
@@ -72,12 +72,12 @@ public:
 	int maxHealth = 100;
 	int baseDamage = 1;
 	int minDamage = 1;
-	int maxDamage = 3;
+	int maxDamage = 1;
 	int defence = 0;
 	int gold = 0;
 	int xp = 0;
 	int expForNext = 100;
-	int level = 0;
+	int level = 2;
 	int curRoomNum = 0;
 	int curFloor = 0;
 	int curItemID = 0;
@@ -96,23 +96,22 @@ public:
 		else {
 			curItemID++;
 			item->ID = curItemID;
-			std::string s = item->name + std::to_string(curItemID);
+			std::wstring s = item->name + std::to_wstring(curItemID);
 			inv.insert({ s, item });
 			curInvTaken++;
 		}
 	};
 
-	int removeItem(std::string name, int count, int ID = 0) {
-		std::string realName;
+	int removeItem(std::wstring name, int count, int ID = 0) {
+		std::wstring realName;
 		if (ID == 0)
 			realName = name;
 		else
-			realName = name + std::to_string(ID);
+			realName = name + std::to_wstring(ID);
 
 		if (inv.find(realName) != inv.end()) {
-			if (inv[realName]->count - count > 0)
-				inv[realName]->count -= count;
-			else {
+			inv[realName]->count -= count;
+			if (inv[realName]->count - count < 0) {
 				inv.erase(realName);
 				curInvTaken--;
 			}
@@ -123,36 +122,35 @@ public:
 	};
 
 	void showInventory() {
-		system("cls");
 		std::vector<MenuItem> items;
 		std::vector<std::shared_ptr<Item>> trueItems;
 		// Indicator that the armor/weapon is currently being worn by the player
-		const char* selected = "\37";
-		char s[33][256];
+		const wchar_t* selected = L"▼";
+		wchar_t s[33][128];
 		for (auto item : inv) {
 			if (item.second->count > 0) {
 				trueItems.push_back(item.second);
 				int count = trueItems.size() - 1;
 				if (item.second == armor || item.second == weapon) {
-					sprintf_s(s[count], "%s (%d/%d) %s", trueItems[count]->name, trueItems[count]->durability, trueItems[count]->maxDurability, selected);
+					wsprintf(s[count], L"%s (%d/%d) %s", trueItems[count]->name, trueItems[count]->durability, trueItems[count]->maxDurability, selected);
 					items.push_back(MenuItem(s[count], trueItems[count]->color));
 				}
 				else {
 					if(item.second->stackable)
-						sprintf_s(s[count], "%s x %d", trueItems[count]->name, trueItems[count]->count);
+						wsprintf(s[count], L"%s x %d", trueItems[count]->name, trueItems[count]->count);
 					else
-						sprintf_s(s[count], "%s (%d/%d)", trueItems[count]->name, trueItems[count]->durability, trueItems[count]->maxDurability);
+						wsprintf(s[count], L"%s (%d/%d)", trueItems[count]->name, trueItems[count]->durability, trueItems[count]->maxDurability);
 					items.push_back(MenuItem(s[count], trueItems[count]->color));
 				}
 			}
 		}
 
 		int itemCount = (int)items.size();
-		sprintf_s(s[maxInvSpace], "Inventory (%d / %d)", (int)trueItems.size(), 32);
+		wsprintf(s[maxInvSpace], L"Inventory (%d / %d)", (int)trueItems.size(), 32);
 		MenuItem title(s[maxInvSpace], BRIGHT_CYAN);
 
 		// Close inventory button
-		items.push_back(MenuItem("Back", WHITE));
+		items.push_back(MenuItem(L"Back", WHITE));
 
 		Menu inventory(&items, title);
 		int choice = 0;
@@ -175,11 +173,11 @@ public:
 				else if (result == 3 || result == 4) {
 					if (result == 3) weapon = nullptr;
 					else if (result == 4) armor = nullptr;
-					sprintf_s(s[choice], "%s (%d/%d)", item->name, item->durability, item->maxDurability);
+					wsprintf(s[choice], L"%s (%d/%d)", item->name, item->durability, item->maxDurability);
 				}
 				else if (result == 5) {
 					if (item->count > 0) 
-						sprintf_s(s[choice], "%s x %d", item->name, item->count);
+						wsprintf(s[choice], L"%s x %d", item->name, item->count);
 					else {
 						items.erase(items.begin() + choice);
 						trueItems.erase(trueItems.begin() + choice);
@@ -191,11 +189,11 @@ public:
 					for (int i = 0; i < trueItems.size(); i++) {
 						std::shared_ptr<Item> curIt = trueItems[i];
 						if ((curIt->type == ItemType::ARMOR && armor != curIt) || (curIt->type == ItemType::WEAPON && weapon != curIt))
-							sprintf_s(s[i], "%s (%d/%d)", trueItems[i]->name, trueItems[i]->durability, trueItems[i]->maxDurability);
+							wsprintf(s[i], L"%s (%d/%d)", trueItems[i]->name, trueItems[i]->durability, trueItems[i]->maxDurability);
 					}
 
 				if (item == armor || item == weapon)
-					sprintf_s(s[choice], "%s (%d/%d) %s", item->name, item->durability, item->maxDurability, selected);
+					wsprintf(s[choice], L"%s (%d/%d) %s", item->name, item->durability, item->maxDurability, selected);
 			}
 		}
 	}

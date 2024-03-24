@@ -5,8 +5,8 @@ class Board {
 public:
 	std::vector<std::vector<Tile>> board;
 	std::vector<std::shared_ptr<Enemy>> enemies;
-	Board(int width, int height, Player& player) : width(width), height(height), p(player), board(width, std::vector<Tile>(height, Tile(TileType::VOID, 0))) {
-		std::cout << "loading...";
+	Board(int width, int height, Player& player) : width(width), height(height), p(player), board(width, std::vector<Tile>(height, Tile(TileType::NOTHING, 0))) {
+		std::wcout << L"loading...";
 		std::vector<std::vector<std::shared_ptr<Room>>> rooms;
 		std::vector<std::shared_ptr<Room>> curFloor;
 		int lastX = 0;
@@ -42,10 +42,14 @@ public:
 				curFloor = std::vector<std::shared_ptr<Room>>();
 			}
 		}
-		// Create all the rooms on the board
-		int lastRoomSize = (int)rooms[rooms.size() - 1].size() - 1;
-		rooms[rooms.size() - 1][lastRoomSize]->num = 100;
+		// Summon door room
 		int hSize = (int)rooms.size();
+		int lastRoomSize = (int)rooms[hSize - 1].size() - 1;
+		bool canBeLastRoom = false;
+		std::shared_ptr<Room> r = rooms[hSize - 1][lastRoomSize];
+		r = std::shared_ptr<Room>(new StairRoom(r->num, r->x, r->y, r->width, r->height, r->bufferX));
+
+		// Create all the rooms on the board
 		for (int i = 0; i < hSize; i++) {
 			int wSize = (int)rooms[i].size();
 			int wSize2 = -1;
@@ -114,12 +118,16 @@ public:
 	}
 
 	void drawBoard() {
-		system("cls");
+		setCursor(0, 0);
 		for (int i = 0; i < height; i++) {
 			for (int j = 0; j < width; j++)
 				board[j][i].draw(&p);
-			std::cout << "\n";
+			std::wcout << L"\n";
 		}
+	}
+
+	void drawBoardFull() {
+		drawBoard();
 		writeStats();
 		writeStats2();
 		writeStats3();
@@ -129,65 +137,65 @@ public:
 	void writeStats() {
 		setCursor(width + 1, 1);
 		// Remove any character atrifacts that may appear
-		std::cout << "============================";
+		std::wcout << L"============================";
 		setCursor(width + 1, 2);
-		std::cout << "|                          |";
+		std::wcout << L"|                          |";
 		setCursor(width + 3, 2);
-		write(color("Level: %\n", GREEN).c_str(), p.level);
+		write(color(L"Level: %\n", GREEN).c_str(), p.level);
 		setCursor(width + 1, 3);
-		std::cout << "|                          |";
+		std::wcout << L"|                          |";
 		setCursor(width + 3, 3);
-		write(color("Experience: %/%\n", GREEN).c_str(), p.xp, p.expForNext);
+		write(color(L"Experience: %/%\n", GREEN).c_str(), p.xp, p.expForNext);
 		setCursor(width + 1, 4);
-		std::cout << "|                          |";
+		std::wcout << L"|                          |";
 		setCursor(width + 3, 4);
-		write(color("Health: %/%\n", RED).c_str(), p.health, p.maxHealth);
+		write(color(L"Health: %/%\n", RED).c_str(), p.health, p.maxHealth);
 		setCursor(width + 1, 5);
-		std::cout << "|                          |";
+		std::wcout << L"|                          |";
 		setCursor(width + 3, 5);
-		write(color("Gold: %\n", YELLOW).c_str(), p.gold);
+		write(color(L"Gold: %\n", YELLOW).c_str(), p.gold);
 		setCursor(width + 1, 6);
-		std::cout << "============================";
+		std::wcout << L"============================";
 	}
 
 	void writeStats2() {
 		setCursor(width + 1, 8);
 		// Remove any character atrifacts that may appear
-		std::cout << "============================";
+		std::wcout << L"============================";
 		setCursor(width + 1, 9);
-		std::cout << "|                          |";
+		std::wcout << L"|                          |";
 		setCursor(width + 3, 9);
-		write(color("Damage: %-%\n", RED).c_str(), p.minDamage, p.maxDamage);
+		write(color(L"Damage: %-%\n", RED).c_str(), p.minDamage, p.maxDamage);
 		setCursor(width + 1, 10);
-		std::cout << "|                          |";
+		std::wcout << L"|                          |";
 		setCursor(width + 3, 10);
-		write(color("Defence: %\n", BLUE).c_str(), p.defence);
+		write(color(L"Defence: %\n", BLUE).c_str(), p.defence);
 		setCursor(width + 1, 11);
-		std::cout << "|                          |";
+		std::wcout << L"|                          |";
 		setCursor(width + 3, 11);
-		write(color("Speed: %\n", YELLOW).c_str(), (p.weapon != nullptr ? p.weapon->speed : 1));
+		write(color(L"Speed: %\n", YELLOW).c_str(), (p.weapon != nullptr ? p.weapon->speed : 1));
 		setCursor(width + 1, 12);
-		std::cout << "============================";
+		std::wcout << L"============================";
 	}
 
 	void writeStats3() {
 		setCursor(width + 1, 14);
 		// Remove any character atrifacts that may appear
-		std::cout << "============================";
+		std::wcout << L"============================";
 		setCursor(width + 1, 15);
-		std::cout << "|                          |";
+		std::wcout << L"|                          |";
 		setCursor(width + 3, 15);
-		write(color("Floor: %\n", YELLOW).c_str(), p.curFloor);
+		write(color(L"Floor: %\n", YELLOW).c_str(), p.curFloor);
 		setCursor(width + 1, 16);
-		std::cout << "|                          |";
+		std::wcout << L"|                          |";
 		setCursor(width + 3, 16);
-		write(color("X: %\n", WHITE).c_str(), p.x);
+		write(color(L"X: %\n", WHITE).c_str(), p.x);
 		setCursor(width + 1, 17);
-		std::cout << "|                          |";
+		std::wcout << L"|                          |";
 		setCursor(width + 3, 17);
-		write(color("Y: %\n", WHITE).c_str(), p.y);
+		write(color(L"Y: %\n", WHITE).c_str(), p.y);
 		setCursor(width + 1, 18);
-		std::cout << "============================";
+		std::wcout << L"============================";
 	}
 
 	// Update board on player action
@@ -233,15 +241,15 @@ public:
 				// Pick up item if player has free inventory space
 				if (res == 0) {
 					if (item->count > 1)
-						write("Picked up % %", item->count, color(item->name, item->color));
+						write(L"Picked up % %", item->count, color(item->name, item->color));
 					else
-						write("Picked up %", color(item->name, item->color));
+						write(L"Picked up %", color(item->name, item->color));
 					changeTile(tileX, tileY, Tile(p.curRoomNum));
 					writeStats();
 					writeStats3();
 				}
 				else
-					write(color("Not enough inventory space.", RED).c_str());
+					write(color(L"Not enough inventory space.", RED).c_str());
 				break;
 			}
 			case TileType::PATH:
@@ -251,7 +259,6 @@ public:
 				writeStats3();
 				break;
 			case TileType::DOOR:
-				startInfo();
 				p.x += dx[move] * 2;
 				p.y += dy[move] * 2;
 				if (board[p.x][p.y].type == TileType::PATH) {
@@ -268,9 +275,9 @@ public:
 			case TileType::STAIRS:
 			{
 				// Move player a tilea
-				MenuItem option("Are you sure you want to go lower? You can't go back.", RED);
-				MenuItem yes("Yes", WHITE);
-				MenuItem no("No", WHITE);
+				MenuItem option(L"Are you sure you want to go lower? You can't go back.", RED);
+				MenuItem yes(L"Yes", WHITE);
+				MenuItem no(L"No", WHITE);
 				std::vector<MenuItem> options({ yes, no });
 				Menu stairsMenu(&options, option);
 				int ch = stairsMenu.open();
@@ -284,19 +291,22 @@ public:
 				std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> results = board[tileX][tileY].interacted(&p).enemy;
 				std::array<int, 5> result = results.first;
 				startInfo();
-				write("Dealt ");
-				write(color("% damage", RED).c_str(), result[0]);
-				write(" to ");
-				write(color("%", enemy->nameColor).c_str(), enemy->name);
+				write(L"Dealt ");
+				write(color(L"% damage", RED).c_str(), result[0]);
+				write(L" to ");
+				write(color(L"%", enemy->nameColor).c_str(), enemy->name);
 				if (enemy->health > 0) {
-					write(" in % hit(s)\nRecieved ", result[1]);
-					write(color("% damage", RED).c_str(), result[2]);
-					write(" in % hit(s).", result[3]);
+					write(L" in % hit(s)\nRecieved ", result[1]);
+					write(color(L"% damage", RED).c_str(), result[2]);
+					write(L" in % hit(s).\n", result[3]);
+					write(color(L"%", enemy->nameColor).c_str(), enemy->name);
+					write(L" has ");
+					write(color(L"% health", RED).c_str(), enemy->health);
+					write(L" left");
 				}
 				else {
-					write(" in % hit(s) killing the enemy\nGained ", result[1]);
-					write(color("% experience", GREEN).c_str(), result[4]);
-					write(".");
+					write(L" in % hit(s) killing the enemy\nGained ", result[1]);
+					write(color(L"% experience", GREEN).c_str(), result[4]);
 					changeTile(tileX, tileY);
 					enemies.erase(std::remove(enemies.begin(), enemies.end(), board[tileX][tileY].enemy), enemies.end());
 					for (std::shared_ptr<Item> i : results.second)
@@ -376,24 +386,28 @@ public:
 						std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> results = e->attacked(&p, true);
 						std::array<int, 5> result = results.first;
 						startInfo();
-						write("Attacked by ");
-						write(color("%", e->nameColor).c_str(), e->name);
-						write("!\nRecieved ");
-						write(color("% damage", RED).c_str(), result[2]);
-						write(" in % hit(s)\nDealt ", result[3]);
-						write(color("% damage", RED).c_str(), result[0]);
-						write(" in % hit(s)", result[1]);
+						write(L"Attacked by ");
+						write(color(L"%", e->nameColor).c_str(), e->name);
+						write(L"!\nRecieved ");
+						write(color(L"% damage", RED).c_str(), result[2]);
+						write(L" in % hit(s)\nDealt ", result[3]);
+						write(color(L"% damage", RED).c_str(), result[0]);
+						write(L" in % hit(s)", result[1]);
 						if (e->health <= 0) {
-							write(" killing the enemy\nGained ");
-							write(color("% experience", GREEN).c_str(), result[4]);
-							write(".");
+							write(L" killing the enemy\nGained ");
+							write(color(L"% experience", GREEN).c_str(), result[4]);
+							write(L".");
 							changeTile(e->x, e->y);
 							enemies.erase(enemies.begin() + i);
 							for (std::shared_ptr<Item> i : results.second)
 								placeItem(i, e->x, e->y);
 						}
-						else
-							write(".");
+						else {
+							write(color(L"\n%", e->nameColor).c_str(), e->name);
+							write(L" has ");
+							write(color(L"% health", RED).c_str(), e->health);
+							write(L" left");
+						}
 						writeStats();
 						writeStats2();
 					}
@@ -407,10 +421,10 @@ public:
 		void startInfo() {
 			for (int i = 0; i < 10; i++)
 				clearLine(height + i);
-			setCursor(0, height - 1);
-			for (int i = 0; i < width; i++)
-				std::cout << "=";
 			setCursor(0, height);
+			for (int i = 0; i < width; i++)
+				std::wcout << L"=";
+			setCursor(0, height + 1);
 		}
 
 private:
@@ -490,7 +504,7 @@ private:
 		int dX = x + dx[d];
 		int dY = y + dy[d];
 		TileType type = board[dX][dY].type;
-		bool isTypeValid = (type != TileType::DOOR && type != TileType::WALL && type != TileType::VOID && type != TileType::ENEM);
+		bool isTypeValid = (type != TileType::DOOR && type != TileType::WALL && type != TileType::NOTHING && type != TileType::ENEM);
 		for (int i = 0; i < 4; i++) {
 			int dX2 = dX + dx[i];
 			int dY2 = dY + dy[i];
