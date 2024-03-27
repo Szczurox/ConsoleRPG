@@ -15,23 +15,24 @@ public:
 		p.curRoomNum = 0;
 		// Add data for creating random amount of random rooms
 		for (int i = 0; i < 20; i++) {
-			int roomType = rand() % 100 + 1;
-			int roomWidth = rand() % 20 + 7;
-			int roomHeight = rand() % 7 + 4;
+			int roomType = randMinMax(1, 100);
+			int roomWidth = randMinMax(7, 20);
+			int roomHeight = randMinMax(4, 7);
 			// Space between rooms horizontally
-			int bufferX = rand() % 6 + 1; 
+			int bufferX = randMinMax(1, 6);
 			int yRoom = lastY + roomHeight; 
 			int xRoom = lastX + roomWidth;
 			if (yRoom >= height) break;
 			if (xRoom < width) {
 				if (i > 0) {
 					if (roomType < 10)
-						curFloor.push_back(std::shared_ptr<Room>(new Tresury(i, lastX, lastY, roomWidth, roomHeight, bufferX)));
+						curFloor.push_back(std::shared_ptr<Room>(new Tresury()));
 					else
-						curFloor.push_back(std::shared_ptr<Room>(new BasicRoom(i, lastX, lastY, roomWidth, roomHeight, bufferX)));
+						curFloor.push_back(std::shared_ptr<Room>(new BasicRoom()));
 				}
 				else 
-					curFloor.push_back(std::shared_ptr<Room>(new EntranceRoom(i, lastX, lastY, roomWidth, roomHeight, bufferX)));
+					curFloor.push_back(std::shared_ptr<Room>(new EntranceRoom()));
+				curFloor.back()->init(i, lastX, lastY, roomWidth, roomHeight, bufferX);
 				lastX += roomWidth + bufferX;
 				if (lowY < yRoom + 1) lowY = yRoom + 1;
 			}
@@ -42,12 +43,13 @@ public:
 				curFloor = std::vector<std::shared_ptr<Room>>();
 			}
 		}
-		// Summon door room
+
+		// Summon stair room
 		int hSize = (int)rooms.size();
 		int lastRoomSize = (int)rooms[hSize - 1].size() - 1;
 		bool canBeLastRoom = false;
-		std::shared_ptr<Room> r = rooms[hSize - 1][lastRoomSize];
-		r = std::shared_ptr<Room>(new StairRoom(r->num, r->x, r->y, r->width, r->height, r->bufferX));
+		Room r = *rooms[hSize - 1][lastRoomSize].get();
+		rooms[hSize - 1][lastRoomSize] = std::shared_ptr<Room>(new StairRoom(r.num, r.x, r.y, r.width, r.height, r.bufferX));
 
 		// Create all the rooms on the board
 		for (int i = 0; i < hSize; i++) {
@@ -55,8 +57,8 @@ public:
 			int wSize2 = -1;
 			for (int j = 0; j < wSize; j++) {
 				for (int d = 0; d < 4; d++) {
-					if (d == 0 && i - 1 >= 0 && j >= rooms[(int)i - 1].size()) continue;
-					if (d == 1 && i + 1 < hSize && j >= rooms[(int)i + 1].size()) continue;
+					if (d == 0 && i - 1 >= 0 && j >= rooms[(size_t)i - 1].size()) continue;
+					if (d == 1 && i + 1 < hSize && j >= rooms[(size_t)i + 1].size()) continue;
 					int dI = i + dy[d];
 					int dJ = j + dx[d];
 					if (dI >= 0 && dJ >= 0 && dI < hSize && dJ < wSize) {
@@ -64,7 +66,7 @@ public:
 						rooms[i][j]->genDoor(d);
 					}
 				}
-				rooms[i][j]->create(board, enemies);
+				rooms[i][j]->create(board, enemies, p.curFloor);
 			}
 		}
 		// Add paths between rooms
@@ -113,7 +115,6 @@ public:
 		if (p.curFloor == 0) {
 			board[3][2] = Tile(std::shared_ptr<Item>(new Gambeson(10)), 0);
 			board[5][2] = Tile(std::shared_ptr<Item>(new WoodenSword(10)), 0);
-			board[4][2] = Tile(std::shared_ptr<Item>(new IronShortSword(10)), 0);
 		}
 	}
 
@@ -262,11 +263,11 @@ public:
 				p.x += dx[move] * 2;
 				p.y += dy[move] * 2;
 				if (board[p.x][p.y].type == TileType::PATH) {
-					board[(int)tileX - dx[move]][(int)tileY - dy[move]] = Tile(p.curRoomNum);
+					board[tileX - dx[move]][tileY - dy[move]] = Tile(p.curRoomNum);
 					board[tileX][tileY].interacted(&p, 1);
 				}
 				else {
-					board[(int)tileX - dx[move]][(int)tileY - dy[move]] = Tile(TileType::PATH, p.curRoomNum, true);
+					board[tileX - dx[move]][tileY - dy[move]] = Tile(TileType::PATH, p.curRoomNum, true);
 					board[tileX][tileY].interacted(&p);
 				}
 				drawBoard();
@@ -308,9 +309,10 @@ public:
 					write(L" in % hit(s) killing the enemy\nGained ", result[1]);
 					write(color(L"% experience", GREEN).c_str(), result[4]);
 					changeTile(tileX, tileY);
-					enemies.erase(std::remove(enemies.begin(), enemies.end(), board[tileX][tileY].enemy), enemies.end());
-					for (std::shared_ptr<Item> i : results.second)
-						placeItem(i, tileX, tileY);
+					auto it = std::find(enemies.begin(), enemies.end(), enemy);
+					if (it != enemies.end()) { enemies.erase(it); }
+					board[tileX][tileY].enemy = nullptr;
+					placeItems(results.second, tileX, tileY);
 				}
 				writeStats();
 				writeStats2();
@@ -336,96 +338,125 @@ public:
 		return 0;
 	}
 
-		int placeItem(std::shared_ptr<Item> item, int tileX, int tileY) {
-			if (board[tileX][tileY].type == TileType::EMPTY) {
-				changeTile(tileX, tileY, Tile(item, p.curRoomNum));
-				return 1;
-			}
-			else {
-				for (int i = 0; i < 4; i++)
-					if (isMoveValid(tileX, tileY, i)) {
-						tileY += dy[i];
-						tileX += dx[i];
-						changeTile(tileX, tileY, Tile(item, p.curRoomNum));
-						return 1;
-					}
-				for (int i = 0; i < 4; i++)
-					if (isTileValid(tileX + dx[i], tileY + dy[i])) {
-						int res = placeItem(item, tileX + dx[i], tileY + dy[i]);
-						if (res == 1) return 1;
-					}
-			}
-			return 0;
-		}
+	int placeItems(std::vector<std::shared_ptr<Item>> items, int tileX, int tileY) {
+		int depth = 1;
+		int count = items.size() - 1;
 
-		// Enemies move AI
-		void moveEnemies(std::shared_ptr<Enemy> fought) {
-			for (int i = 0; i < enemies.size(); i++) {
-				std::shared_ptr<Enemy> e = enemies[i];
-				if (e->health > 0) {
-					int dist = distance(e->x, e->y, p.x, p.y);
-					int move = -1;
-					if (dist > e->sight || p.curRoomNum != e->roomNum) {
-						int d = rand() % 4;
-						if (isMoveEnemyValid(e->x, e->y, d))
-							move = d;
+		if (items.size() == 1)
+			changeTile(tileX, tileY, Tile(items[0], -1));
+		else
+			while (count >= 0) {
+				int x = depth;
+				int y = 0;
+				int p = 1 - depth;
+
+				while (x > y) {
+					y++;
+					if (p <= 0)
+						p = p + 2 * y + 1;
+					else {
+						x--;
+						p = p + 2 * y - 2 * x + 1;
 					}
-					else if (dist > 1 && p.curRoomNum == e->roomNum) {
-						if (p.y < e->y && isMoveEnemyValid(e->x, e->y, UP))
-							move = UP;
-						else if (p.y > e->y && isMoveEnemyValid(e->x, e->y, DOWN))
-							move = DOWN;
-						else if (p.x < e->x && isMoveEnemyValid(e->x, e->y, LEFT))
-							move = LEFT;
-						else if (p.x > e->x && isMoveEnemyValid(e->x, e->y, RIGHT))
-							move = RIGHT;
-					}
-					else if (e != fought && p.curRoomNum == e->roomNum) {
-						move = -1;
-						// Enemy attacks
-						std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> results = e->attacked(&p, true);
-						std::array<int, 5> result = results.first;
-						startInfo();
-						write(L"Attacked by ");
-						write(color(L"%", e->nameColor).c_str(), e->name);
-						write(L"!\nRecieved ");
-						write(color(L"% damage", RED).c_str(), result[2]);
-						write(L" in % hit(s)\nDealt ", result[3]);
-						write(color(L"% damage", RED).c_str(), result[0]);
-						write(L" in % hit(s)", result[1]);
-						if (e->health <= 0) {
-							write(L" killing the enemy\nGained ");
-							write(color(L"% experience", GREEN).c_str(), result[4]);
-							write(L".");
-							changeTile(e->x, e->y);
-							enemies.erase(enemies.begin() + i);
-							for (std::shared_ptr<Item> i : results.second)
-								placeItem(i, e->x, e->y);
+
+					if (x < y)
+						break;
+
+					int dirsX[8] = { x, -x, x, -x, y, -y, y, -y };
+					int dirsY[8] = { y, y, -y, -y, x, x, -x, -x };
+
+					for (int i = 0; i < 4 && count >= 0; i++) {
+						if (isTileValid(dirsX[i] + tileX, dirsY[i] + tileY, true)) {
+							changeTile(dirsX[i] + tileX, dirsY[i] + tileY, Tile(items[count--], -1));
 						}
-						else {
-							write(color(L"\n%", e->nameColor).c_str(), e->name);
-							write(L" has ");
-							write(color(L"% health", RED).c_str(), e->health);
-							write(L" left");
+						if (count < 0)
+							break;
+					}
+
+					if(x != y)
+						for (int i = 3; i < 8 && count >= 0; i++) {
+							if (isTileValid(dirsX[i] + tileX, dirsY[i] + tileY, true)) {
+								changeTile(dirsX[i] + tileX, dirsY[i] + tileY, Tile(items[count--], -1));
+							}
+							if (count < 0)
+								break;
 						}
-						writeStats();
-						writeStats2();
+
+				}
+				depth++;
+			}
+
+		return 0;
+	}
+
+	// Enemies move AI
+	void moveEnemies(std::shared_ptr<Enemy> fought) {
+		for (int i = 0; i < enemies.size(); i++) {
+			std::shared_ptr<Enemy> e = enemies[i];
+			if (e->health > 0) {
+				int dist = distance(e->x, e->y, p.x, p.y);
+				int move = -1;
+				if (dist > e->sight || p.curRoomNum != e->roomNum) {
+					int d = rand() % 4;
+					if (isMoveEnemyValid(e->x, e->y, d))
+						move = d;
+				}
+				else if (dist > 1 && p.curRoomNum == e->roomNum) {
+					if (p.y < e->y && isMoveEnemyValid(e->x, e->y, UP))
+						move = UP;
+					else if (p.y > e->y && isMoveEnemyValid(e->x, e->y, DOWN))
+						move = DOWN;
+					else if (p.x < e->x && isMoveEnemyValid(e->x, e->y, LEFT))
+						move = LEFT;
+					else if (p.x > e->x && isMoveEnemyValid(e->x, e->y, RIGHT))
+						move = RIGHT;
+				}
+				else if (e != fought && p.curRoomNum == e->roomNum) {
+					move = -1;
+					// Enemy attacks
+					std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> results = e->attacked(&p, true);
+					std::array<int, 5> result = results.first;
+					startInfo();
+					write(L"Attacked by ");
+					write(color(L"%", e->nameColor).c_str(), e->name);
+					write(L"!\nRecieved ");
+					write(color(L"% damage", RED).c_str(), result[2]);
+					write(L" in % hit(s)\nDealt ", result[3]);
+					write(color(L"% damage", RED).c_str(), result[0]);
+					write(L" in % hit(s)", result[1]);
+					if (e->health <= 0) {
+						write(L" killing the enemy\nGained ");
+						write(color(L"% experience", GREEN).c_str(), result[4]);
+						write(L".");
+						changeTile(e->x, e->y);
+						enemies.erase(enemies.begin() + i);
+						placeItems(results.second, e->x, e->y);
 					}
-					if (move != -1) {
-						moveEntity(e->x, e->y, move);
+					else {
+						write(color(L"\n%", e->nameColor).c_str(), e->name);
+						write(L" has ");
+						write(color(L"% health", RED).c_str(), e->health);
+						write(L" left");
 					}
+					writeStats();
+					writeStats2();
+				}
+				if (move != -1) {
+					swapTile(e->x, e->y, move);
 				}
 			}
+			else changeTile(e->x, e->y);
 		}
+	}
 
-		void startInfo() {
-			for (int i = 0; i < 10; i++)
-				clearLine(height + i);
-			setCursor(0, height);
-			for (int i = 0; i < width; i++)
-				std::wcout << L"=";
-			setCursor(0, height + 1);
-		}
+	void startInfo() {
+		for (int i = 0; i < 10; i++)
+			clearLine(height + i);
+		setCursor(0, height);
+		for (int i = 0; i < width; i++)
+			std::wcout << L"=";
+		setCursor(0, height + 1);
+	}
 
 private:
 	int width;
@@ -466,6 +497,8 @@ private:
 			board[x2][y2] = Tile(i, t1.roomNum);
 		else if (e != nullptr) {
 			board[x2][y2] = Tile(e, t1.roomNum);
+			e->x = x2;
+			e->y = y2;
 		}
 		else
 			board[x2][y2] = t1;
@@ -491,6 +524,10 @@ private:
 
 	bool isTileValid(int x, int y) {
 		return x >= 0 && y >= 0 && x < width && y < height;
+	}
+
+	bool isTileValid(int x, int y, bool empty) {
+		return x >= 0 && y >= 0 && x < width && y < height && board[x][y].type == TileType::EMPTY;
 	}
 
 	// 0 - Up, 1 - Down, 2 - Left, 3 - Right

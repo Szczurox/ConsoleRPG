@@ -31,7 +31,6 @@ public:
 	Item(const wchar_t* name, ItemType type, const wchar_t* symbol = L"@", unsigned char color = YELLOW) : name(name), type(type) {}
 	// 1 - Add to inventory
 	virtual int picked(Player* player) { return 1; }
-	// 1 - Weapon, 2 - Armor
 	virtual int used(Player* player) { return 0; }
 	virtual int menuHandle(Player* p, std::vector<MenuItem>& options, std::vector<MenuItem>& texts) {
 		Menu menu(&options, &texts, true);
@@ -130,7 +129,7 @@ public:
 		for (auto item : inv) {
 			if (item.second->count > 0) {
 				trueItems.push_back(item.second);
-				int count = trueItems.size() - 1;
+				int count = (int)trueItems.size() - 1;
 				if (item.second == armor || item.second == weapon) {
 					wsprintf(s[count], L"%s (%d/%d) %s", trueItems[count]->name, trueItems[count]->durability, trueItems[count]->maxDurability, selected);
 					items.push_back(MenuItem(s[count], trueItems[count]->color));

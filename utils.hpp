@@ -85,6 +85,10 @@ int randMinMax(int min, int max) {
 	return rand() % (max - min + 1) + min;
 }
 
+bool chance(int prob, int omega) {
+	return prob > (rand() % omega);
+}
+
 int distance(int x, int y, int x2, int y2) {
 	return (int)sqrtf((float)((y - y2) * (y - y2) + (x - x2) * (x - x2)));
 };

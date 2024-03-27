@@ -123,9 +123,7 @@ public:
 		return 5;
 	}
 	virtual void onRemove(Player* p) {
-		p->removeItem(name, 1);
-		if (p->armor.get() == this)
-			p->armor = nullptr;
+		p->removeItem(name, count);
 	}
 	virtual int itemMenu(Player* p) {
 		MenuItem nameI(name, color);
@@ -144,6 +142,35 @@ public:
 	}
 };
 
+class Resource : public Item {
+public:
+	Resource() {
+		type = ItemType::RESOURCE;
+		count = 1;
+		stackable = true;
+	}
+	virtual int used(Player* player) {
+		return 1;
+	}
+	virtual void onRemove(Player* p) {
+		p->removeItem(name, count);
+	}
+	virtual int itemMenu(Player* p) {
+		MenuItem nameI(name, color);
+		MenuItem loreI(lore, WHITE);
+		wchar_t d[256];
+		wsprintf(d, L"Amount: %d", count);
+		MenuItem coun(d, BRIGHT_BLUE);
+		std::vector<MenuItem> texts({ nameI, loreI, coun });
+
+		MenuItem remove(L"Destroy", RED);
+		MenuItem back(L"Back", WHITE);
+		std::vector<MenuItem> options({ remove, back });
+
+		return menuHandle(p, options, texts);
+	}
+};
+
 // Tile items
 
 class GoldPile : public Item {
@@ -152,6 +179,7 @@ public:
 		type = ItemType::RESOURCE;
 		name = L"gold";
 		count = randMinMax(minGold, maxGold);
+		stackable = false;
 	}
 
 	int picked(Player* player) {
@@ -226,9 +254,44 @@ public:
 		lore = L"Heals 100 HP";
 		color = BRIGHT_BLUE;
 		symbol = L"▲";
-		reqLevel = 0;
 	}
 };
+
+class ZombieMeat : public Usable {
+public:
+	virtual int used(Player* p) {
+		int random = randMinMax(0, 100);
+		if (random >= 60) {
+			p->health += random;
+			if (p->health > p->maxHealth) p->health = p->maxHealth;
+		}
+		else if (random < 40) 
+			p->health -= random;
+		p->removeItem(name, 1);
+		return 5;
+	}
+
+	ZombieMeat() {
+		name = L"Zombie Meat";
+		lore = L"Who knows what consuming it does";
+		color = GREEN;
+		symbol = L"▬";
+		stackable = true;
+	}
+};
+
+// Resources
+
+class Bone : public Resource {
+public:
+	Bone() {
+		name = L"Bone";
+		lore = L"You can obtain them by killing skeletons";
+		color = GREY;
+		symbol = L"/";
+	}
+};
+
 
 
 #endif // !ITEMS

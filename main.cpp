@@ -100,8 +100,10 @@ int startGame() {
 		}
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
+			bool wait = false;
 			while (ch == 0) {
-				if (_kbhit()) {
+				if (_kbhit() && !wait) {
+					wait = true;
 					ch = _getch();
 
 					// Esc
@@ -130,6 +132,8 @@ int startGame() {
 					if (p.health <= 0) {
 						isRunning = false;
 					}
+
+					wait = false;
 				}
 			}
 		}

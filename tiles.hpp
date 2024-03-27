@@ -135,10 +135,21 @@ public:
 	int width = 10;
 	int height = 5;
 	int bufferX = 0;
+	int floor = 1;
 	// Room number
 	int num = 0;
 	Room() {}
 	Room(int num, int x, int y, int width, int height, int bufferX) : num(num), x(x), y(y), width(width), height(height), bufferX(bufferX) {}
+	
+	void init(int numb, int xR, int yR, int w, int h, int buffX) {
+		num = numb;
+		x = xR;
+		y = yR;
+		width = w;
+		height = h;
+		bufferX = buffX;
+	}
+	
 	void genDoor(int d) {
 		if (d < 2)
 			doors[d] = x + rand() % (width - 2) + 1;
@@ -146,31 +157,30 @@ public:
 			doors[d] = y + rand() % (height - 2) + 1;
 	}
 
-	virtual std::vector<std::pair<Tile, int>> summonEntities() {
-		return std::vector<std::pair<Tile, int>>();
+	virtual std::vector<Tile> summonEntities() {
+		return std::vector<Tile>();
 	}
 
 	virtual void summonSetEntities(std::vector<std::vector<Tile>>& board) {}
 
-	virtual std::pair<Tile, int> randEntity(int maxAmount, int chance, Tile tile) {
-		int numOfTiles = 0;
-		for (int i = 0; i < maxAmount; i++) {
-			int random = rand() % chance + 1;
-			if (random == 1) numOfTiles++;
-		}
-		return std::make_pair(tile, numOfTiles);
+	// T - Enemy / Item, Args - Enemy / Item args
+	template<class T, typename ... Args>
+	void randEntity(std::vector<Tile>& vec, int maxAmount, int prob, int omega, Args ... args) {
+		for (int i = 0; i < maxAmount; i++)
+			if (chance(prob, omega)) vec.push_back(Tile(std::shared_ptr<T>(new T(args ...)), num));
 	}
 
-	virtual void create(std::vector<std::vector<Tile>>& board, std::vector<std::shared_ptr<Enemy>>& enemies) {
+	virtual void create(std::vector<std::vector<Tile>>& board, std::vector<std::shared_ptr<Enemy>>& enemies, int floorNum) {
+		floor = floorNum + 1;
 		int xW = x + width;
 		int yH = y + height;
 		for (int i = y; i < yH; i++) {
 			board[x][i] = Tile(TileType::WALL, num, false);
-			board[(int)xW - 1][i] = Tile(TileType::WALL, num, false);
+			board[xW - 1][i] = Tile(TileType::WALL, num, false);
 		}
 		for (int i = x; i < xW; i++) {
 			board[i][y] = Tile(TileType::WALL, num, false);
-			board[i][(int)yH - 1] = Tile(TileType::WALL, num, false);
+			board[i][yH - 1] = Tile(TileType::WALL, num, false);
 		}
 		if (doors[0] != -1)
 			board[doors[0]][y] = Tile(true, num, neighbours[0], false);
@@ -183,31 +193,29 @@ public:
 
 		summonSetEntities(board);
 
-		std::vector<std::pair<Tile, int>> entities = summonEntities();
+		std::vector<Tile> entities = summonEntities();
 
 		// Append each summoned entity to a random location
-		for (std::pair<Tile, int> e : entities) {
-			for (int i = 0; i < e.second; i++) {
-				bool valid = false;
-				while (!valid) {
-					int randX = randMinMax(x + 1, xW - 1);
-					int randY = randMinMax(y + 1, yH - 1);
-					int isNearDoor = false;
-					for (int i = 0; i < 4; i++) {
-						int dX = randX + dx[i];
-						int dY = randY + dy[i];
-						if (board[dX][dY].type == TileType::DOOR)
-							isNearDoor = true;
+		for (Tile e : entities) {
+			bool valid = false;
+			while (!valid) {
+				int randX = randMinMax(x + 1, xW - 1);
+				int randY = randMinMax(y + 1, yH - 1);
+				int isNearDoor = false;
+				for (int i = 0; i < 4; i++) {
+					int dX = randX + dx[i];
+					int dY = randY + dy[i];
+					if (board[dX][dY].type == TileType::DOOR)
+						isNearDoor = true;
+				}
+				if (!isNearDoor && board[randX][randY].type == TileType::NOTHING) {
+					board[randX][randY] = e;
+					if (e.type == TileType::ENEM) {
+						e.enemy->x = randX;
+						e.enemy->y = randY;
+						enemies.push_back(e.enemy);
 					}
-					if (!isNearDoor && board[randX][randY].type == TileType::NOTHING) {
-						board[randX][randY] = e.first;
-						if (e.first.type == TileType::ENEM) {
-							e.first.enemy->x = randX;
-							e.first.enemy->y = randY;
-							enemies.push_back(e.first.enemy);
-						}
-						valid = true;
-					}
+					valid = true;
 				}
 			}
 		}
@@ -221,44 +229,46 @@ public:
 
 class EntranceRoom : public Room {
 public:
-	EntranceRoom(int numb, int xC, int yC, int w, int h, int buffX) {
+	EntranceRoom() {
 		type = RoomType::ENTRANCE;
-		num = numb;
-		x = xC;
-		y = yC;
-		width = w;
-		height = h;
-		bufferX = buffX;
 	}
 };
 
 class BasicRoom : public Room {
 public:
-	BasicRoom(int numb, int xC, int yC, int w, int h, int buffX) {
+	BasicRoom() {
 		type = RoomType::BASIC;
-		num = numb;
-		x = xC;
-		y = yC;
-		width = w;
-		height = h;
-		bufferX = buffX;
 	}
 
-	virtual std::vector<std::pair<Tile, int>> summonEntities() {
-		std::vector<std::pair<Tile, int>> e;
+	virtual std::vector<Tile> summonEntities() {
+		std::vector<Tile> e;
 		// Items
-		e.push_back(randEntity(width * height / 10, 3, Tile(std::shared_ptr<Item>(new GoldPile(100, 250)), num)));
-		e.push_back(randEntity(3, 10, Tile(std::shared_ptr<Item>(new HealthPotion()), num)));
-		e.push_back(randEntity(1, 20, Tile(std::shared_ptr<Item>(new WoodenSword(randMinMax(1, 100))), num)));
-		e.push_back(randEntity(1, 20, Tile(std::shared_ptr<Item>(new Gambeson(randMinMax(1, 100))), num)));
+		randEntity<GoldPile>(e, width * height / 10, 1, 3, 100, 250);
+		randEntity<HealthPotion>(e, 3, 1, 10);
+		randEntity<WoodenSword>(e, 1, 1, 20 * floor, randMinMax(1, 100));
+		randEntity<Gambeson>(e, 1, 1, 20 * floor, randMinMax(1, 100));
+
 		// Enemies
-		e.push_back(randEntity(2, 3, Tile(std::shared_ptr<Enemy>(new Skeleton(0, 0, num)), num)));
+		if (floor < 2)
+			randEntity<Skeleton>(e, 2, 1, 3, 0, 0, num);
+		else if (floor < 4) {
+			randEntity<Skeleton>(e, 3, 1, 3, 0, 0, num);
+			randEntity<Zombie>(e, 2, 1, 3, 0, 0, num);
+		}
+		else {
+			randEntity<Skeleton>(e, 2, 1, 3, 0, 0, num);
+			randEntity<Zombie>(e, 2, 1, 2, 0, 0, num);
+		}
 		return e;
 	}
 };
 
 class StairRoom : public Room {
 public:
+	StairRoom() {
+		type = RoomType::STAIR;
+	}
+
 	StairRoom(int numb, int xC, int yC, int w, int h, int buffX) {
 		type = RoomType::STAIR;
 		num = numb;
@@ -275,37 +285,31 @@ public:
 		board[randMinMax(x + 2, xW - 2)][randMinMax(y + 2, yH - 2)] = Tile(TileType::STAIRS, num);
 	}
 
-	virtual std::vector<std::pair<Tile, int>> summonEntities() {
-		std::vector<std::pair<Tile, int>> e;
+	virtual std::vector<Tile> summonEntities() {
+		std::vector<Tile> e;
 		// Items
-		e.push_back(randEntity(width * height / 10, 3, Tile(std::shared_ptr<Item>(new GoldPile(100, 250)), num)));
-		e.push_back(randEntity(3, 10, Tile(std::shared_ptr<Item>(new HealthPotion()), num)));
+		randEntity<GoldPile>(e, width * height / 10, 1, 3, 100, 250);
+		randEntity<HealthPotion>(e, 3, 1, 10);
 		// Enemies
-		e.push_back(randEntity(2, 3, Tile(std::shared_ptr<Enemy>(new Skeleton(0, 0, num)), num)));
+		randEntity<Skeleton>(e, 2, 1, 3, 0, 0, num);
 		return e;
 	}
 };
 
 class Tresury : public Room {
 public:
-	Tresury(int numb, int xC, int yC, int w, int h, int buffX) {
+	Tresury() {
 		type = RoomType::TREASURE;
-		num = numb;
-		x = xC;
-		y = yC;
-		width = w;
-		height = h;
-		bufferX = buffX;
 	}
 
-	virtual std::vector<std::pair<Tile, int>> summonEntities() {
-		std::vector<std::pair<Tile, int>> e;
+	virtual std::vector<Tile> summonEntities() {
+		std::vector<Tile> e;
 		// Items
-		e.push_back(randEntity(3, 1, Tile(std::shared_ptr<Item>(new GoldPile(100, 250)), num)));
-		e.push_back(randEntity(5, 3, Tile(std::shared_ptr<Item>(new GoldPile(100, 250)), num)));
-		e.push_back(randEntity(5, 5, Tile(std::shared_ptr<Item>(new HealthPotion()), num)));
-		e.push_back(randEntity(1, 10, Tile(std::shared_ptr<Item>(new IronShortSword(randMinMax(20, 200))), num)));
-		e.push_back(randEntity(1, 5, Tile(std::shared_ptr<Item>(new Gambeson(randMinMax(10, 100))), num)));
+		randEntity<GoldPile>(e, 3, 1, 1, 100 * floor, 250 * floor);
+		randEntity<GoldPile>(e, 5, 1, 4, 100 * floor, 250 * floor);
+		randEntity<HealthPotion>(e, 5, 1, 5);
+		randEntity<IronShortSword>(e, 1, 1, 10, randMinMax(20, 200));
+		randEntity<Gambeson>(e, 1, 1, 5 * floor, randMinMax(1, 100));
 		return e;
 	}
 };

@@ -35,13 +35,26 @@ public:
 		return rand() % (maxDamage - minDamage+1) + minDamage;
 	}
 
-	std::vector<std::shared_ptr<Item>> getLoot() {
+	template<class T, typename ... Args>
+	void randLoot(std::vector<std::shared_ptr<Item>>& vec, int maxAmount, int prob, int omega, Args ... args) {
+		if (!T(args ...).stackable) {
+			for (int i = 0; i < maxAmount; i++)
+				if (chance(prob, omega)) vec.push_back(std::shared_ptr<Item>(new T(args ...)));
+		}
+		else {
+			vec.push_back(std::shared_ptr<Item>(new T(args ...)));
+			for (int i = 0; i < maxAmount; i++)
+				if (chance(prob, omega)) vec.back()->count++;
+		}
+	}
+
+	virtual std::vector<std::shared_ptr<Item>> getLoot() {
 		std::vector<std::shared_ptr<Item>> items;
-		items.push_back(std::shared_ptr<Item>(new GoldPile(minGold, maxGold)));
+		randLoot<GoldPile>(items, 3, 1, 2, minGold, maxGold);
 		return items;
 	}
 
-	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>>attacked(Player* p, bool first = false) {
+	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> attacked(Player* p, bool first = false) {
 		// Player dmg, number of player attacks, enemy dmg, number of enemy attacks
 		std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> attacks({ 0, 1, 0, 1, xp }, {});
 		int pSpeed;
@@ -111,10 +124,19 @@ public:
 		name = L"Skeleton";
 		nameColor = GREY;
 		color = WHITE;
-		xp = 10;
 		health = 10;
 		minDamage = 4;
 		maxDamage = 6;
+		xp = 10;
+		minGold = 10;
+		maxGold = 100;
+	}
+
+	virtual std::vector<std::shared_ptr<Item>> getLoot() {
+		std::vector<std::shared_ptr<Item>> items;
+		randLoot<GoldPile>(items, 3, 1, 2, minGold, maxGold);
+		randLoot<Bone>(items, 5, 1, 3);
+		return items;
 	}
 };
 
@@ -124,16 +146,26 @@ public:
 		x = xC;
 		y = yC;
 		roomNum = num;
-		health = 20;
-		minDamage = 1;
-		maxDamage = 3;
 		name = L"Zombie";
+		symbol = L"☻";
 		nameColor = GREY;
 		color = GREEN;
+		health = 20;
+		minDamage = 3;
+		maxDamage = 5;
 		xp = 20;
+		minGold = 30;
+		maxGold = 200;
 	}
 
+	virtual std::vector<std::shared_ptr<Item>> getLoot() {
+		std::vector<std::shared_ptr<Item>> items;
+		randLoot<GoldPile>(items, 4, 1, 2, minGold, maxGold);
+		randLoot<ZombieMeat>(items, 5, 1, 3);
+		return items;
+	}
 };
+
 
 
 
