@@ -41,5 +41,8 @@
     <ClInclude Include="tiles.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="npc.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -113,8 +113,12 @@ public:
 	void boardInit() {
 		board[p.x][p.y] = Tile(TileType::PLAY, p.curRoomNum, true);
 		if (p.curFloor == 0) {
+			std::vector<std::shared_ptr<Item>> shop;
+			shop.push_back(std::shared_ptr<Item>(new WoodenSword()));
+			shop.push_back(std::shared_ptr<Item>(new Gambeson()));
 			board[3][2] = Tile(std::shared_ptr<Item>(new Gambeson(10)), 0);
 			board[5][2] = Tile(std::shared_ptr<Item>(new WoodenSword(10)), 0);
+			board[4][2] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
 		}
 	}
 
@@ -242,15 +246,36 @@ public:
 				// Pick up item if player has free inventory space
 				if (res == 0) {
 					if (item->count > 1)
-						write(L"Picked up % %", item->count, color(item->name, item->color));
+						write(L"Picked up % %", item->count, color(item->name, item->colord));
 					else
-						write(L"Picked up %", color(item->name, item->color));
+						write(L"Picked up %", color(item->name, item->colord));
 					changeTile(tileX, tileY, Tile(p.curRoomNum));
 					writeStats();
 					writeStats3();
 				}
-				else
+				else {
 					write(color(L"Not enough inventory space.", RED).c_str());
+					changeTile(p.x, p.y, Tile(item, p.curRoomNum));
+					moveEntity(p.x, p.y, move);
+				}
+				break;
+			}
+			case TileType::NPC: 
+			{
+				InteractionResult res = board[tileX][tileY].interacted(&p);
+				drawBoardFull();
+				if (res.result >= 0) {
+					std::shared_ptr<Item> item = res.item;
+					startInfo();
+					write(L"Bought ");
+					write(color(item->name, item->colord).c_str());
+					write(L" for ");
+					write(color(L"% gold", YELLOW).c_str(), item->cost * 3);
+				}
+				else if(res.result == -2) {
+					startInfo();
+					write(L"You don't have enough % to buy %!", color(L"gold", YELLOW), color(res.item->name, res.item->colord));
+				}
 				break;
 			}
 			case TileType::PATH:
@@ -548,7 +573,7 @@ private:
 			if (isTileValid(dX2, dY2) && board[dX2][dY2].type == TileType::DOOR)
 				isTypeValid = false;
 		}
-		return (isTypeValid && isTileValid(dX, dY));
+		return (isTypeValid && isTileValid(dX, dY) && type != TileType::NPC);
 	}
 
 	void moveEntity(int& x, int& y, int d, int numOfTiles = 1) {

@@ -1,8 +1,6 @@
 ﻿#ifndef ENEMY
 #define ENEMY
 
-class Tile;
-
 class Enemy {
 public:
 	const wchar_t* name = L"Enemy";

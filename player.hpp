@@ -10,12 +10,14 @@ enum class ItemType {
 	USABLE = 3
 };
 
-class Item : std::enable_shared_from_this<Item> {
+class Item {
 public:
 	const wchar_t* name = L"";
 	const wchar_t* symbol = L"@";
 	const wchar_t* lore = L"";
+	unsigned char colord = YELLOW;
 	ItemType type = ItemType::RESOURCE;
+	bool stackable = true;
 	int count = 0;
 	int minDmg = 0;
 	int maxDmg = 0;
@@ -24,9 +26,8 @@ public:
 	int reqLevel = 0;
 	int durability = 0;
 	int maxDurability = 0;
+	int cost = 0;
 	int ID = 0;
-	unsigned char color = YELLOW;
-	bool stackable = true;
 	Item() {}
 	Item(const wchar_t* name, ItemType type, const wchar_t* symbol = L"@", unsigned char color = YELLOW) : name(name), type(type) {}
 	// 1 - Add to inventory
@@ -65,7 +66,7 @@ public:
 	std::map<std::wstring, std::shared_ptr<Item>> inv;
 	std::shared_ptr<Item> weapon = nullptr;
 	std::shared_ptr<Item> armor = nullptr;
-	const int maxInvSpace = 32;
+	const int maxInvSpace = 37;
 	int curInvTaken = 0;
 	int health = 100;
 	int maxHealth = 100;
@@ -120,26 +121,45 @@ public:
 			return -1;
 	};
 
+	// Create char array for equipable item for inventory menu
+	int itemChar(wchar_t s[128], std::shared_ptr<Item> item, bool selected = false) {
+		char durColor = RED;
+		wsprintf(s, L"%d/%d", item->durability, item->maxDurability);
+		if(item->durability * 100 / item->maxDurability > 30)
+			durColor = YELLOW;
+		if (item->durability * 100 / item->maxDurability > 60)
+			durColor = GREEN;
+		wsprintf(s, L"%ls (%ls)%ls", color(item->name, item->colord).c_str(), color(s, durColor).c_str(), color(selected ? L" ▼" : L"", YELLOW).c_str());
+		return 3;
+	}
+
+	// Create char array for stackable item for inventory menu
+	int itemCharStack(wchar_t s[128], std::shared_ptr<Item> item) {
+		wsprintf(s, L"%d", item->count);
+		wsprintf(s, L"%s x %s", color(item->name, item->colord).c_str(), color(s, WHITE).c_str());
+		return 2;
+	}
+
 	void showInventory() {
 		std::vector<MenuItem> items;
 		std::vector<std::shared_ptr<Item>> trueItems;
-		// Indicator that the armor/weapon is currently being worn by the player
-		const wchar_t* selected = L"▼";
-		wchar_t s[33][128];
+		// There is a maximum of 37 inventory slots
+		wchar_t s[38][128];
 		for (auto item : inv) {
 			if (item.second->count > 0) {
 				trueItems.push_back(item.second);
 				int count = (int)trueItems.size() - 1;
 				if (item.second == armor || item.second == weapon) {
-					wsprintf(s[count], L"%s (%d/%d) %s", trueItems[count]->name, trueItems[count]->durability, trueItems[count]->maxDurability, selected);
-					items.push_back(MenuItem(s[count], trueItems[count]->color));
+					itemChar(s[count], trueItems[count], true);
+					items.push_back(MenuItem(3, s[count]));
 				}
 				else {
-					if(item.second->stackable)
-						wsprintf(s[count], L"%s x %d", trueItems[count]->name, trueItems[count]->count);
+					int colors = 0;
+					if (item.second->stackable)
+						colors = itemCharStack(s[count], trueItems[count]);
 					else
-						wsprintf(s[count], L"%s (%d/%d)", trueItems[count]->name, trueItems[count]->durability, trueItems[count]->maxDurability);
-					items.push_back(MenuItem(s[count], trueItems[count]->color));
+						colors = itemChar(s[count], trueItems[count]);
+					items.push_back(MenuItem(colors, s[count]));
 				}
 			}
 		}
@@ -147,9 +167,9 @@ public:
 		int itemCount = (int)items.size();
 		wsprintf(s[maxInvSpace], L"Inventory (%d / %d)", (int)trueItems.size(), 32);
 		MenuItem title(s[maxInvSpace], BRIGHT_CYAN);
-
 		// Close inventory button
-		items.push_back(MenuItem(L"Back", WHITE));
+		MenuItem back(L"Back", WHITE);
+		items.push_back(back);
 
 		Menu inventory(&items, title);
 		int choice = 0;
@@ -172,11 +192,11 @@ public:
 				else if (result == 3 || result == 4) {
 					if (result == 3) weapon = nullptr;
 					else if (result == 4) armor = nullptr;
-					wsprintf(s[choice], L"%s (%d/%d)", item->name, item->durability, item->maxDurability);
+					itemChar(s[choice], item);
 				}
 				else if (result == 5) {
 					if (item->count > 0) 
-						wsprintf(s[choice], L"%s x %d", item->name, item->count);
+						itemCharStack(s[choice], item);
 					else {
 						items.erase(items.begin() + choice);
 						trueItems.erase(trueItems.begin() + choice);
@@ -188,11 +208,11 @@ public:
 					for (int i = 0; i < trueItems.size(); i++) {
 						std::shared_ptr<Item> curIt = trueItems[i];
 						if ((curIt->type == ItemType::ARMOR && armor != curIt) || (curIt->type == ItemType::WEAPON && weapon != curIt))
-							wsprintf(s[i], L"%s (%d/%d)", trueItems[i]->name, trueItems[i]->durability, trueItems[i]->maxDurability);
+							itemChar(s[choice],item);
 					}
 
 				if (item == armor || item == weapon)
-					wsprintf(s[choice], L"%s (%d/%d) %s", item->name, item->durability, item->maxDurability, selected);
+					itemChar(s[choice], item, true);
 			}
 		}
 	}

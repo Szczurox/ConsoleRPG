@@ -20,6 +20,7 @@
 #include"menu.hpp"
 #include"player.hpp"
 #include"items.hpp"
+#include"npc.hpp"
 #include"enemy.hpp"
 #include"tiles.hpp"
 #include"board.hpp"

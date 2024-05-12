@@ -149,6 +149,7 @@
     <ClInclude Include="board.hpp" />
     <ClInclude Include="enemy.hpp" />
     <ClInclude Include="items.hpp" />
+    <ClInclude Include="npc.hpp" />
     <ClInclude Include="player.hpp" />
     <ClInclude Include="menu.hpp" />
     <ClInclude Include="tiles.hpp" />

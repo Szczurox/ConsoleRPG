@@ -26,14 +26,20 @@ public:
 			p->weapon = nullptr;
 	}
 	virtual int itemMenu(Player* p) {
-		MenuItem nameI(name, color);
+		MenuItem nameI(name, colord);
 		MenuItem loreI(lore, WHITE);
 		wchar_t s[256];
 		wsprintf(s, L"Deals %d-%d damage and has %d speed", minDmg, maxDmg, speed);
 		MenuItem damage(s, YELLOW);
+		char durColor = RED;
+		if (durability * 100 / maxDurability > 30)
+			durColor = YELLOW;
+		if (durability * 100 / maxDurability > 60)
+			durColor = GREEN;
 		wchar_t d[256];
-		wsprintf(d, L"Durability: %d/%d", durability, maxDurability);
-		MenuItem dur(d, BRIGHT_BLUE);
+		wsprintf(d, L"%d/%d", durability, maxDurability);
+		wsprintf(d, L"%s %s", color(L"Durability:", BRIGHT_BLUE).c_str(), color(d, durColor).c_str());
+		MenuItem dur(2, d);
 		std::vector<MenuItem> texts({ nameI, loreI, damage, dur });
 		if (p->level < reqLevel) {
 			wchar_t e[256];
@@ -81,14 +87,20 @@ public:
 			p->armor = nullptr;
 	}
 	virtual int itemMenu(Player* p) {
-		MenuItem nameI(name, color);
+		MenuItem nameI(name, colord);
 		MenuItem loreI(lore, WHITE);
 		wchar_t s[256];
 		wsprintf(s, L"Gives you %d defence", prot);
 		MenuItem prot(s, YELLOW);
+		char durColor = RED;
+		if (durability * 100 / maxDurability >= 30)
+			durColor = YELLOW;
+		if (durability * 100 / maxDurability >= 70)
+			durColor = GREEN;
 		wchar_t d[256];
-		wsprintf(d, L"Durability: %d/%d", durability, maxDurability);
-		MenuItem dur(d, BRIGHT_BLUE);
+		wsprintf(d, L"%d/%d", durability, maxDurability);
+		wsprintf(d, L"%s %s", color(L"Durability:", BRIGHT_BLUE).c_str(), color(d, durColor).c_str());
+		MenuItem dur(2, d);
 		std::vector<MenuItem> texts({ nameI, loreI, prot, dur });
 		if (p->level < reqLevel) {
 			wchar_t e[256];
@@ -126,7 +138,7 @@ public:
 		p->removeItem(name, count);
 	}
 	virtual int itemMenu(Player* p) {
-		MenuItem nameI(name, color);
+		MenuItem nameI(name, colord);
 		MenuItem loreI(lore, WHITE);
 		wchar_t d[256];
 		wsprintf(d, L"Amount: %d", count);
@@ -156,7 +168,7 @@ public:
 		p->removeItem(name, count);
 	}
 	virtual int itemMenu(Player* p) {
-		MenuItem nameI(name, color);
+		MenuItem nameI(name, colord);
 		MenuItem loreI(lore, WHITE);
 		wchar_t d[256];
 		wsprintf(d, L"Amount: %d", count);
@@ -195,7 +207,7 @@ public:
 	WoodenSword(int dur = 100) {
 		name = L"Wooden Sword";
 		lore = L"Basic wooden sword";
-		color = GREY;
+		colord = GREY;
 		symbol = L"┼";
 		minDmg = 3;
 		maxDmg = 5;
@@ -203,6 +215,7 @@ public:
 		reqLevel = 0;
 		durability = dur;
 		maxDurability = 100;
+		cost = 200;
 	}
 };
 
@@ -211,7 +224,7 @@ public:
 	IronShortSword(int dur = 200) {
 		name = L"Iron Shortsword";
 		lore = L"Quick weapon";
-		color = BRIGHT_BLUE;
+		colord = BRIGHT_BLUE;
 		symbol = L"┼";
 		minDmg = 3;
 		maxDmg = 8;
@@ -219,6 +232,7 @@ public:
 		reqLevel = 2;
 		durability = dur;
 		maxDurability = 200;
+		cost = 1000;
 	}
 };
 
@@ -226,15 +240,16 @@ public:
 
 class Gambeson : public Armor {
 public:
-	Gambeson(int dur) {
+	Gambeson(int dur = 200) {
 		name = L"Gambeson";
 		lore = L"Basic padded cloth armor";
-		color = GREY;
+		colord = GREY;
 		symbol = L"O";
 		prot = 2;
 		reqLevel = 0;
 		durability = dur;
 		maxDurability = 200;
+		cost = 200;
 	}
 };
 
@@ -252,8 +267,9 @@ public:
 	HealthPotion() {
 		name = L"Health Potion";
 		lore = L"Heals 100 HP";
-		color = BRIGHT_BLUE;
+		colord = BRIGHT_BLUE;
 		symbol = L"▲";
+		cost = 100;
 	}
 };
 
@@ -274,9 +290,10 @@ public:
 	ZombieMeat() {
 		name = L"Zombie Meat";
 		lore = L"Who knows what consuming it does";
-		color = GREEN;
+		colord = GREEN;
 		symbol = L"▬";
 		stackable = true;
+		cost = 50;
 	}
 };
 
@@ -287,8 +304,9 @@ public:
 	Bone() {
 		name = L"Bone";
 		lore = L"You can obtain them by killing skeletons";
-		color = GREY;
+		colord = GREY;
 		symbol = L"/";
+		cost = 10;
 	}
 };
 

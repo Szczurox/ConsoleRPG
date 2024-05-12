@@ -13,11 +13,14 @@ enum class TileType {
 	DOOR = 6,
 	PATH = 7,
 	STAIRS = 8,
+	NPC = 9
 };
 
 struct InteractionResult {
 	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> enemy = std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>>();
+	std::shared_ptr<Item> item;
 	int result = 0;
+	InteractionResult(std::pair<std::shared_ptr<Item>, int> isItem) : item(isItem.first), result(isItem.second) {}
 	InteractionResult(std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> enemy) : enemy(enemy) {};
 	InteractionResult(int result) : result(result) {};
 };
@@ -27,6 +30,7 @@ public:
 	TileType type = TileType::EMPTY;
 	std::shared_ptr<Item> item = nullptr;
 	std::shared_ptr<Enemy> enemy = nullptr;
+	std::shared_ptr<NPC> npc = nullptr;
 	int roomNum = 0;
 	bool isVisible = true;
 
@@ -34,6 +38,7 @@ public:
 	Tile(TileType type, int roomNum, bool isVisible = true) : type(type), isVisible(isVisible), roomNum(roomNum) {}
 	Tile(std::shared_ptr<Item> item, int roomNum, bool isVisible = true) : type(TileType::ITEM), item(item), isVisible(isVisible), roomNum(roomNum) {}
 	Tile(std::shared_ptr<Enemy> enemy, int roomNum, bool isVisible = true) : type(TileType::ENEM), enemy(enemy), isVisible(isVisible), roomNum(roomNum) {}
+	Tile(std::shared_ptr<NPC> npc, int roomNum, bool isVisible = true) : type(TileType::NPC), npc(npc), isVisible(isVisible), roomNum(roomNum) {}
 	Tile(bool isDoor, int roomNum, int room, bool isVisible = true) : type(TileType::DOOR), roomNum(roomNum), isVisible(isVisible) {}
 
 	void draw(Player* p) {
@@ -55,7 +60,7 @@ public:
 				break;
 			case TileType::ITEM:
 				if (p->curRoomNum == roomNum) {
-					writeColor(item->symbol, item->color);
+					writeColor(item->symbol, item->colord);
 					break;
 				}
 				std::wcout << L" ";
@@ -70,6 +75,13 @@ public:
 			case TileType::STAIRS:
 				if (p->curRoomNum == roomNum) {
 					writeColor(L"#", YELLOW);
+					break;
+				}
+				std::wcout << L" ";
+				break;
+			case TileType::NPC:
+				if (p->curRoomNum == roomNum) {
+					writeColor(npc->symbol, npc->colord);
 					break;
 				}
 				std::wcout << L" ";
@@ -106,6 +118,9 @@ public:
 				p->addItem(item);
 			else if (res == 1)
 				return InteractionResult(1);
+		}
+		if (type == TileType::NPC) {
+			return InteractionResult(npc->interacted(p));
 		}
 		// Player dmg, Player hits, Enemy dmg, Enemy hits, xp
 		if (type == TileType::ENEM)
