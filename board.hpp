@@ -45,8 +45,8 @@ public:
 		}
 
 		// Summon stair room
-		int hSize = (int)rooms.size();
-		int lastRoomSize = (int)rooms[hSize - 1].size() - 1;
+		unsigned int hSize = (int)rooms.size();
+		unsigned int lastRoomSize = (int)rooms[hSize - 1].size() - 1;
 		bool canBeLastRoom = false;
 		Room r = *rooms[hSize - 1][lastRoomSize].get();
 		rooms[hSize - 1][lastRoomSize] = std::shared_ptr<Room>(new StairRoom(r.num, r.x, r.y, r.width, r.height, r.bufferX));
@@ -82,7 +82,7 @@ public:
 					int r1x = r1->doors[1];
 					int r1y = r1->y + r1->height - 1;
 					while (r2->y - 1 > r1y || r1x != r2->doors[0]) {
-						if (r2->y - 1 > r1y && board[r1x][r1y+1].type != TileType::WALL)
+						if (r2->y - 1 > r1y && board[r1x][r1y + 1].type != TileType::WALL)
 							r1y += 1;
 						else if (r2->doors[0] < r1x && board[r1x - 1][r1y].type != TileType::WALL)
 							r1x -= 1;
@@ -116,8 +116,24 @@ public:
 			std::vector<std::shared_ptr<Item>> shop;
 			shop.push_back(std::shared_ptr<Item>(new WoodenSword()));
 			shop.push_back(std::shared_ptr<Item>(new Gambeson()));
-			board[3][2] = Tile(std::shared_ptr<Item>(new Gambeson(10)), 0);
-			board[5][2] = Tile(std::shared_ptr<Item>(new WoodenSword(10)), 0);
+			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
+			p.addItem(std::shared_ptr<Item>(new Gambeson(10)));
+			p.addItem(std::shared_ptr<Item>(new WoodenSword(10)));
+			board[3][2] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
+			board[4][2] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
+		}
+		else {
+			std::vector<std::shared_ptr<Item>> shop;
+			shop.push_back(std::shared_ptr<Item>(new WoodenSword()));
+			shop.push_back(std::shared_ptr<Item>(new Gambeson()));
+			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
+			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
+			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
+			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
+			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
+			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
+			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
+			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
 			board[4][2] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
 		}
 	}
@@ -263,18 +279,18 @@ public:
 			case TileType::NPC: 
 			{
 				InteractionResult res = board[tileX][tileY].interacted(&p);
+				SoldInfo info = res.soldInfo;
 				drawBoardFull();
 				if (res.result >= 0) {
-					std::shared_ptr<Item> item = res.item;
 					startInfo();
 					write(L"Bought ");
-					write(color(item->name, item->colord).c_str());
+					write(color(info.name, info.color).c_str());
 					write(L" for ");
-					write(color(L"% gold", YELLOW).c_str(), item->cost * 3);
+					write(color(L"% gold", YELLOW).c_str(), info.cost);
 				}
 				else if(res.result == -2) {
 					startInfo();
-					write(L"You don't have enough % to buy %!", color(L"gold", YELLOW), color(res.item->name, res.item->colord));
+					write(L"You don't have enough % to buy %!", color(L"gold", YELLOW), color(info.name, info.color));
 				}
 				break;
 			}
@@ -452,7 +468,6 @@ public:
 					if (e->health <= 0) {
 						write(L" killing the enemy\nGained ");
 						write(color(L"% experience", GREEN).c_str(), result[4]);
-						write(L".");
 						changeTile(e->x, e->y);
 						enemies.erase(enemies.begin() + i);
 						placeItems(results.second, e->x, e->y);
@@ -466,9 +481,8 @@ public:
 					writeStats();
 					writeStats2();
 				}
-				if (move != -1) {
+				if (move != -1)
 					swapTile(e->x, e->y, move);
-				}
 			}
 			else changeTile(e->x, e->y);
 		}

@@ -18,9 +18,9 @@ enum class TileType {
 
 struct InteractionResult {
 	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> enemy = std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>>();
-	std::shared_ptr<Item> item;
+	SoldInfo soldInfo = SoldInfo();
 	int result = 0;
-	InteractionResult(std::pair<std::shared_ptr<Item>, int> isItem) : item(isItem.first), result(isItem.second) {}
+	InteractionResult(SoldInfo info) : soldInfo(info), result(info.res) {};
 	InteractionResult(std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> enemy) : enemy(enemy) {};
 	InteractionResult(int result) : result(result) {};
 };
@@ -200,11 +200,11 @@ public:
 		if (doors[0] != -1)
 			board[doors[0]][y] = Tile(true, num, neighbours[0], false);
 		if (doors[1] != -1)
-			board[doors[1]][(int)yH - 1] = Tile(true, num, neighbours[1], false);
+			board[doors[1]][yH - 1] = Tile(true, num, neighbours[1], false);
 		if (doors[2] != -1)
 			board[x][doors[2]] = Tile(true, num, neighbours[2], false);
 		if (doors[3] != -1)
-			board[(int)xW - 1][doors[3]] = Tile(true, num, neighbours[3], false);
+			board[xW - 1][doors[3]] = Tile(true, num, neighbours[3], false);
 
 		summonSetEntities(board);
 
@@ -269,10 +269,12 @@ public:
 		else if (floor < 4) {
 			randEntity<Skeleton>(e, 3, 1, 3, 0, 0, num);
 			randEntity<Zombie>(e, 2, 1, 3, 0, 0, num);
+			randEntity<Assassin>(e, 2, 1, 4, 0, 0, num);
 		}
 		else {
 			randEntity<Skeleton>(e, 2, 1, 3, 0, 0, num);
 			randEntity<Zombie>(e, 2, 1, 2, 0, 0, num);
+			randEntity<Assassin>(e, 2, 1, 3, 0, 0, num);
 		}
 		return e;
 	}

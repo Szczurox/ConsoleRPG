@@ -18,6 +18,7 @@ public:
 	Menu(std::vector<MenuItem>* options, std::vector<MenuItem>* texts, bool space = false) : texts(texts), space(space) { init(options);  };
 
 	void init(std::vector<MenuItem>* options) {
+		opts = std::vector<std::vector<MenuItem>*>();
 		int pageSize = 20 - texts->size();
 		int optionsSize = options->size();
 		int pages;
@@ -82,6 +83,10 @@ public:
 		}
 		return choice;
 	};
+
+	void refresh() {
+		render();
+	}
 
 	~Menu() {
 		for (auto o : opts)

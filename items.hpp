@@ -21,9 +21,9 @@ public:
 		}
 	}
 	virtual void onRemove(Player* p) {
-		p->removeItem(name, 1);
 		if (p->weapon.get() == this)
 			p->weapon = nullptr;
+		p->removeItem(name, 1, ID);
 	}
 	virtual int itemMenu(Player* p) {
 		MenuItem nameI(name, colord);
@@ -50,7 +50,7 @@ public:
 		std::vector<MenuItem> options;
 		if (p->level >= reqLevel) {
 			MenuItem equip;
-			if (p->armor.get() != this) 
+			if (p->weapon.get() != this) 
 				equip = MenuItem(L"Equip", BRIGHT_GREEN);
 			else 
 				equip = MenuItem(L"Unequip", BRIGHT_GREEN);
@@ -82,9 +82,9 @@ public:
 		}
 	}
 	virtual void onRemove(Player* p) {
-		p->removeItem(name, 1);
 		if (p->armor.get() == this)
 			p->armor = nullptr;
+		p->removeItem(name, 1, ID);
 	}
 	virtual int itemMenu(Player* p) {
 		MenuItem nameI(name, colord);
@@ -215,7 +215,7 @@ public:
 		reqLevel = 0;
 		durability = dur;
 		maxDurability = 100;
-		cost = 200;
+		cost = 600;
 	}
 };
 
@@ -232,7 +232,7 @@ public:
 		reqLevel = 2;
 		durability = dur;
 		maxDurability = 200;
-		cost = 1000;
+		cost = 2500;
 	}
 };
 
@@ -249,7 +249,7 @@ public:
 		reqLevel = 0;
 		durability = dur;
 		maxDurability = 200;
-		cost = 200;
+		cost = 600;
 	}
 };
 
@@ -264,12 +264,13 @@ public:
 		return 5;
 	}
 
-	HealthPotion() {
+	HealthPotion(int cnt = 1) {
 		name = L"Health Potion";
 		lore = L"Heals 100 HP";
 		colord = BRIGHT_BLUE;
 		symbol = L"▲";
-		cost = 100;
+		cost = 500;
+		count = cnt;
 	}
 };
 
@@ -287,13 +288,14 @@ public:
 		return 5;
 	}
 
-	ZombieMeat() {
+	ZombieMeat(int cnt = 1) {
 		name = L"Zombie Meat";
 		lore = L"Who knows what consuming it does";
 		colord = GREEN;
 		symbol = L"▬";
 		stackable = true;
 		cost = 50;
+		count = cnt;
 	}
 };
 
@@ -301,12 +303,13 @@ public:
 
 class Bone : public Resource {
 public:
-	Bone() {
+	Bone(int cnt = 1) {
 		name = L"Bone";
 		lore = L"You can obtain them by killing skeletons";
 		colord = GREY;
 		symbol = L"/";
 		cost = 10;
+		count = cnt;
 	}
 };
 

@@ -32,6 +32,7 @@ int drawEscMenu();
 bool drawDeadMenu();
 void infoMenu();
 
+
 int main() {
 	_setmode(_fileno(stdout), _O_U8TEXT);
 	srand((unsigned int)time(NULL));
@@ -96,9 +97,8 @@ int startGame() {
 		boards.push_back(b);
 		boards[p.curFloor].boardInit();
 		boards[p.curFloor].drawBoardFull();
-		if (boards.size() == 1) {
+		if (boards.size() == 1)
 			write(color(L"Version: 0.0.5\nSaving system isn't functional yet.", YELLOW).c_str());
-		}
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
 			bool wait = false;
@@ -130,9 +130,8 @@ int startGame() {
 							p.curRoomNum = 0;
 						}
 					}
-					if (p.health <= 0) {
+					if (p.health <= 0)
 						isRunning = false;
-					}
 
 					wait = false;
 				}
@@ -204,7 +203,7 @@ void infoMenu() {
 	MenuItem text2(L"S / Down Arrow - Down", WHITE);
 	MenuItem text3(L"A / Left Arrow - Left", WHITE);
 	MenuItem text4(L"D / Right Arrow - Right", WHITE);
-	MenuItem text5(L"E - Inventory", WHITE);
+	MenuItem text5(L"I - Inventory", WHITE);
 	MenuItem text6(L"Esc - Back / Open Escape Menu", WHITE);
 	MenuItem back(L"Back", WHITE);
 	std::vector<MenuItem> options({ back });

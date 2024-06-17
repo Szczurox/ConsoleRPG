@@ -74,7 +74,7 @@ public:
 	int minDamage = 1;
 	int maxDamage = 1;
 	int defence = 0;
-	int gold = 0;
+	int gold = 100000;
 	int xp = 0;
 	int expForNext = 100;
 	int level = 2;
@@ -109,12 +109,9 @@ public:
 		else
 			realName = name + std::to_wstring(ID);
 
+
 		if (inv.find(realName) != inv.end()) {
 			inv[realName]->count -= count;
-			if (inv[realName]->count - count < 0) {
-				inv.erase(realName);
-				curInvTaken--;
-			}
 			return 0;
 		}
 		else
@@ -129,7 +126,7 @@ public:
 			durColor = YELLOW;
 		if (item->durability * 100 / item->maxDurability > 60)
 			durColor = GREEN;
-		wsprintf(s, L"%ls (%ls)%ls", color(item->name, item->colord).c_str(), color(s, durColor).c_str(), color(selected ? L" ▼" : L"", YELLOW).c_str());
+		wsprintf(s, L"%ls (%ls)%ls", color(item->name, item->colord).c_str(), color(s, durColor).c_str(), color(selected ? L" ▼" : L"  ", YELLOW).c_str());
 		return 3;
 	}
 
@@ -140,10 +137,37 @@ public:
 		return 2;
 	}
 
+	// Remove element from inventory menu
+	void removeElement(int idx, wchar_t s[38][128], std::vector<MenuItem>& it, std::vector<std::shared_ptr<Item>>& tIt, Menu& inv) {
+		it.erase(it.begin() + idx);
+		tIt.erase(tIt.begin() + idx);
+
+		// Shift s elements to the left, don't move the last one (inventory count)
+		for (int i = idx; i < maxInvSpace - 1; ++i)
+			std::memmove(s[i], s[i + 1], 128 * sizeof(wchar_t));
+
+		// Remove the "back" MenuItem so that it doesn't get affected by the s shift
+		it.pop_back();
+
+		// Update MenuItems after the shift
+		for (int i = idx; i < it.size(); ++i)
+			it[i].text = s[i];
+
+		// Add back "back"
+		MenuItem back(L"Back", WHITE);
+		it.push_back(back);
+
+		std::memset(s[maxInvSpace - 1], 0, 128 * sizeof(wchar_t));
+
+		wsprintf(s[maxInvSpace], L"Inventory (%d / %d)", (int)tIt.size(), maxInvSpace);
+
+		// Refresh inventory menu
+		inv.init(&it);
+	}
+
 	void showInventory() {
-		std::vector<MenuItem> items;
-		std::vector<std::shared_ptr<Item>> trueItems;
-		// There is a maximum of 37 inventory slots
+		std::vector<MenuItem> items = std::vector<MenuItem>();
+		std::vector<std::shared_ptr<Item>> trueItems = std::vector<std::shared_ptr<Item>>();
 		wchar_t s[38][128];
 		for (auto item : inv) {
 			if (item.second->count > 0) {
@@ -164,8 +188,7 @@ public:
 			}
 		}
 
-		int itemCount = (int)items.size();
-		wsprintf(s[maxInvSpace], L"Inventory (%d / %d)", (int)trueItems.size(), 32);
+		wsprintf(s[maxInvSpace], L"Inventory (%d / %d)", (int)trueItems.size(), maxInvSpace);
 		MenuItem title(s[maxInvSpace], BRIGHT_CYAN);
 		// Close inventory button
 		MenuItem back(L"Back", WHITE);
@@ -180,36 +203,36 @@ public:
 				// Item menu
 				int result = item->itemMenu(this);
 				// Update menu after item got destroyed
-				if (result == -1) {
-					items.erase(items.begin() + choice);
-					trueItems.erase(trueItems.begin() + choice);
-				}
+				if (result == -1)
+					removeElement(choice, s, items, trueItems, inventory);
 				// Equip weapon
-				else if (result == 1) weapon = item;
+				else if (result == 1) {
+					// Update previously equiped
+					for (int i = 0; i < trueItems.size(); i++)
+						if (trueItems[i] == weapon)
+							itemChar(s[i], trueItems[i], false);
+					weapon = item;
+				}
 				// Equip armor
-				else if (result == 2) armor = item;
+				else if (result == 2) {
+					// Update previously equiped
+					for (int i = 0; i < trueItems.size(); i++)
+						if (trueItems[i] == armor)
+							itemChar(s[i], trueItems[i], false);
+					armor = item;
+				}
 				// Unequip weapon/armor
 				else if (result == 3 || result == 4) {
 					if (result == 3) weapon = nullptr;
 					else if (result == 4) armor = nullptr;
-					itemChar(s[choice], item);
+					itemChar(s[choice], item, false);
 				}
 				else if (result == 5) {
 					if (item->count > 0) 
 						itemCharStack(s[choice], item);
-					else {
-						items.erase(items.begin() + choice);
-						trueItems.erase(trueItems.begin() + choice);
-					}
+					else
+						removeElement(choice, s, items, trueItems, inventory);
 				}
-
-				// Update selected weapon/armor
-				if (result == 1 || result == 2)
-					for (int i = 0; i < trueItems.size(); i++) {
-						std::shared_ptr<Item> curIt = trueItems[i];
-						if ((curIt->type == ItemType::ARMOR && armor != curIt) || (curIt->type == ItemType::WEAPON && weapon != curIt))
-							itemChar(s[choice],item);
-					}
 
 				if (item == armor || item == weapon)
 					itemChar(s[choice], item, true);

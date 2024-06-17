@@ -164,7 +164,31 @@ public:
 	}
 };
 
+class Assassin : public Enemy {
+public:
+	Assassin(int xC, int yC, int num) {
+		x = xC;
+		y = yC;
+		roomNum = num;
+		name = L"Assassin";
+		symbol = L"☻";
+		nameColor = BRIGHT_BLUE;
+		color = RED;
+		health = 20;
+		minDamage = 5;
+		maxDamage = 20;
+		xp = 40;
+		minGold = 100;
+		maxGold = 500;
+	}
 
+	virtual std::vector<std::shared_ptr<Item>> getLoot() {
+		std::vector<std::shared_ptr<Item>> items;
+		randLoot<GoldPile>(items, 4, 1, 2, minGold, maxGold);
+		randLoot<IronShortSword>(items, 1, 1, 50, randMinMax(20, 200));
+		return items;
+	}
+};
 
 
 
