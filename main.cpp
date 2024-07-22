@@ -20,6 +20,7 @@
 #include"menu.hpp"
 #include"player.hpp"
 #include"items.hpp"
+#include"crafting.hpp"
 #include"npc.hpp"
 #include"enemy.hpp"
 #include"tiles.hpp"
@@ -98,7 +99,7 @@ int startGame() {
 		boards[p.curFloor].boardInit();
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.0.5\nSaving system isn't functional yet.", YELLOW).c_str());
+			write(color(L"Version: 0.0.9\nSaving system isn't functional yet.", YELLOW).c_str());
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
 			bool wait = false;
@@ -117,6 +118,12 @@ int startGame() {
 					else if (ch == 'I' || ch == 'i') {
 						setWindow((int)B_WIDTH, (int)B_HEIGHT);
 						p.showInventory();
+						setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
+						boards[p.curFloor].drawBoardFull();
+					}
+					else if (ch == 'C' || ch == 'c') {
+						setWindow((int)B_WIDTH, (int)B_HEIGHT);
+						p.showCrafting();
 						setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
 						boards[p.curFloor].drawBoardFull();
 					}
@@ -204,7 +211,8 @@ void infoMenu() {
 	MenuItem text3(L"A / Left Arrow - Left", WHITE);
 	MenuItem text4(L"D / Right Arrow - Right", WHITE);
 	MenuItem text5(L"I - Inventory", WHITE);
-	MenuItem text6(L"Esc - Back / Open Escape Menu", WHITE);
+	MenuItem text6(L"C - Crafting", WHITE);
+	MenuItem text7(L"Esc - Back / Open Escape Menu", WHITE);
 	MenuItem back(L"Back", WHITE);
 	std::vector<MenuItem> options({ back });
 	std::vector<MenuItem> texts({ text, text2, text3, text4, text5, text6 });

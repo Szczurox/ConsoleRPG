@@ -253,6 +253,21 @@ public:
 	}
 };
 
+class BoneArmor : public Armor {
+public:
+	BoneArmor(int dur = 100) {
+		name = L"Bone Armor";
+		lore = L"Armor made out of bones";
+		colord = GREY;
+		symbol = L"O";
+		prot = 3;
+		reqLevel = 0;
+		durability = dur;
+		maxDurability = 100;
+		cost = 500;
+	}
+};
+
 // Usables
 
 class HealthPotion : public Usable {
@@ -290,11 +305,11 @@ public:
 
 	ZombieMeat(int cnt = 1) {
 		name = L"Zombie Meat";
-		lore = L"Who knows what consuming it does";
+		lore = L"Who knows what it does";
 		colord = GREEN;
 		symbol = L"▬";
 		stackable = true;
-		cost = 50;
+		cost = 200;
 		count = cnt;
 	}
 };
@@ -305,10 +320,10 @@ class Bone : public Resource {
 public:
 	Bone(int cnt = 1) {
 		name = L"Bone";
-		lore = L"You can obtain them by killing skeletons";
+		lore = L"Can be obtained by killing skeletons";
 		colord = GREY;
 		symbol = L"/";
-		cost = 10;
+		cost = 100;
 		count = cnt;
 	}
 };

@@ -34,8 +34,6 @@ public:
 		colord = YELLOW;
 	}
 
-
-
 	virtual SoldInfo interacted(Player* p) {
 		MenuItem nameMenu(name, nameColor);
 		MenuItem message(L"Hello there! What can I get for you?", WHITE);

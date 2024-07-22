@@ -2,7 +2,6 @@
 #define TILES
 
 // Tiles
-
 enum class TileType {
 	EMPTY = 0,
 	WALL = 1,
@@ -179,6 +178,7 @@ public:
 	virtual void summonSetEntities(std::vector<std::vector<Tile>>& board) {}
 
 	// T - Enemy / Item, Args - Enemy / Item args
+	// Tile / limit / probability / omega / args
 	template<class T, typename ... Args>
 	void randEntity(std::vector<Tile>& vec, int maxAmount, int prob, int omega, Args ... args) {
 		for (int i = 0; i < maxAmount; i++)
@@ -258,7 +258,7 @@ public:
 	virtual std::vector<Tile> summonEntities() {
 		std::vector<Tile> e;
 		// Items
-		randEntity<GoldPile>(e, width * height / 10, 1, 3, 100, 250);
+		randEntity<GoldPile>(e, min(width * height / 10, 3), 1, 3, 1, 100);
 		randEntity<HealthPotion>(e, 3, 1, 10);
 		randEntity<WoodenSword>(e, 1, 1, 20 * floor, randMinMax(1, 100));
 		randEntity<Gambeson>(e, 1, 1, 20 * floor, randMinMax(1, 100));
@@ -322,8 +322,8 @@ public:
 	virtual std::vector<Tile> summonEntities() {
 		std::vector<Tile> e;
 		// Items
-		randEntity<GoldPile>(e, 3, 1, 1, 100 * floor, 250 * floor);
-		randEntity<GoldPile>(e, 5, 1, 4, 100 * floor, 250 * floor);
+		randEntity<GoldPile>(e, 3, 1, 1, 1 * floor, 100 * floor);
+		randEntity<GoldPile>(e, 5, 1, 4, 1 * floor, 100 * floor);
 		randEntity<HealthPotion>(e, 5, 1, 5);
 		randEntity<IronShortSword>(e, 1, 1, 10, randMinMax(20, 200));
 		randEntity<Gambeson>(e, 1, 1, 5 * floor, randMinMax(1, 100));

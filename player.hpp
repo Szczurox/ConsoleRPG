@@ -61,9 +61,78 @@ public:
 	virtual void onRemove(Player* p) { }
 };
 
+class Recipe {
+public:
+	std::shared_ptr<Item> item = std::shared_ptr<Item>(new Item());
+	std::vector<std::shared_ptr<Item>> items;
+	Recipe(std::vector<std::shared_ptr<Item>> items) : items(items) {};
+	Recipe() {};
+
+	virtual std::shared_ptr<Item> getItem() {
+		return std::shared_ptr<Item>(new Item);
+	}
+
+	virtual std::shared_ptr<Item> craft(std::map<std::wstring, std::shared_ptr<Item>>& inv, int& curID, int& invTaken) {
+		std::vector<MenuItem> texts = std::vector<MenuItem>();
+		std::vector<MenuItem> options = std::vector<MenuItem>();
+		texts.push_back(MenuItem(item->name, item->colord));
+		texts.push_back(MenuItem(item->lore, WHITE));
+		// Max 10 different ingredients
+		wchar_t s[10][128];
+		int check = 0;
+		int count = 0;
+		for (auto req : items) {
+			wsprintf(s[count], L"(0/%d)", req->count);
+			wsprintf(s[count], L"%s %s", color(req->name, req->colord).c_str(), color(s[count], RED).c_str());
+			texts.push_back(MenuItem(2, s[count]));
+			for (auto item : inv) {
+				std::shared_ptr<Item> it = item.second;
+				std::wstring nameReq = it->ID == 0 ? req->name : req->name + std::to_wstring(it->ID);
+				std::wstring nameIt = it->ID == 0 ? it->name : it->name + std::to_wstring(it->ID);
+				if (nameReq == nameIt) {
+					bool enough = it->count >= req->count;
+					wsprintf(s[count], L"(%d/%d)", it->count, req->count);
+					wsprintf(s[count], L"%s %s", color(req->name, req->colord).c_str(), color(s[count], enough ? GREEN : RED).c_str());
+					count++;
+					if (enough)
+						check++;
+					break;
+				}
+			}
+		}
+
+		if (check >= items.size()) 
+			options.push_back(MenuItem(L"Craft", GREEN));
+		else
+			texts.push_back(MenuItem(L"Insufficient resources", RED));
+
+		options.push_back(MenuItem(L"Back", WHITE));
+
+		Menu recipesMenu(&options, &texts);
+		int choice = recipesMenu.open();
+
+		if (check >= items.size() && choice == 0) {
+			for (auto req : items)
+				for (auto item : inv) {
+					std::shared_ptr<Item> it = item.second;
+					std::wstring nameReq = it->ID == 0 ? req->name : req->name + std::to_wstring(it->ID);
+					std::wstring nameIt = it->ID == 0 ? it->name : it->name + std::to_wstring(it->ID);
+					if (nameReq == nameIt && it->count >= req->count)
+						inv[nameIt]->count -= req->count;
+				}
+			
+			return getItem();
+		}
+
+		return std::shared_ptr<Item>(new Item());
+	};
+};
+
+
 class Player {
 public:
 	std::map<std::wstring, std::shared_ptr<Item>> inv;
+	std::vector<std::shared_ptr<Recipe>> recipes;
 	std::shared_ptr<Item> weapon = nullptr;
 	std::shared_ptr<Item> armor = nullptr;
 	const int maxInvSpace = 37;
@@ -74,7 +143,7 @@ public:
 	int minDamage = 1;
 	int maxDamage = 1;
 	int defence = 0;
-	int gold = 100000;
+	int gold = 0;
 	int xp = 0;
 	int expForNext = 100;
 	int level = 2;
@@ -165,6 +234,7 @@ public:
 		inv.init(&it);
 	}
 
+	// I - show inventory
 	void showInventory() {
 		std::vector<MenuItem> items = std::vector<MenuItem>();
 		std::vector<std::shared_ptr<Item>> trueItems = std::vector<std::shared_ptr<Item>>();
@@ -191,8 +261,7 @@ public:
 		wsprintf(s[maxInvSpace], L"Inventory (%d / %d)", (int)trueItems.size(), maxInvSpace);
 		MenuItem title(s[maxInvSpace], BRIGHT_CYAN);
 		// Close inventory button
-		MenuItem back(L"Back", WHITE);
-		items.push_back(back);
+		items.push_back(MenuItem(L"Back", WHITE));
 
 		Menu inventory(&items, title);
 		int choice = 0;
@@ -236,6 +305,36 @@ public:
 
 				if (item == armor || item == weapon)
 					itemChar(s[choice], item, true);
+			}
+		}
+	}
+
+
+	// C - show recipes
+	void showCrafting() {
+		const int recipesSize = 50;
+		std::vector<MenuItem> items = std::vector<MenuItem>();
+		wchar_t s[recipesSize+1][128]; 
+
+		for (auto recipe : recipes) {
+			wsprintf(s[items.size()], L"%s", color(recipe->item->name, recipe->item->colord).c_str());
+			items.push_back(MenuItem(1, s[items.size()]));
+		}
+
+		wsprintf(s[recipesSize], L"Recipes");
+		MenuItem title(s[recipesSize], BRIGHT_CYAN);
+
+		items.push_back(MenuItem(L"Back", WHITE));
+
+		Menu recipesMenu(&items, title);
+		int choice = 0;
+
+		while (choice != -1 && choice < recipes.size()) {
+			choice = recipesMenu.open(choice);
+			if (choice != -1 && choice < recipes.size()) {
+				std::shared_ptr<Item> res = recipes[choice]->craft(inv, curItemID, curInvTaken);
+				if (res->count != 0)
+					addItem(res);
 			}
 		}
 	}

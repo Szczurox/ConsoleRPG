@@ -119,6 +119,7 @@ public:
 			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
 			p.addItem(std::shared_ptr<Item>(new Gambeson(10)));
 			p.addItem(std::shared_ptr<Item>(new WoodenSword(10)));
+			pushRecipies(p);
 			board[3][2] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
 			board[4][2] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
 		}
@@ -325,7 +326,7 @@ public:
 				int ch = stairsMenu.open();
 				if (ch == 0)
 					return 1;
-				drawBoard();
+				drawBoardFull();
 				break;
 			}
 			case TileType::ENEM:

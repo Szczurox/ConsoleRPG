@@ -44,5 +44,8 @@
     <ClInclude Include="npc.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="crafting.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
