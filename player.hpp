@@ -34,6 +34,7 @@ public:
 	int maxDurability = 0;
 	int cost = 0;
 	int ID = 0;
+	int messageType = 0; // Helper variable for different messages in writeMessage
 
 	Item() {}
 	Item(const wchar_t* name, ItemType type, const wchar_t* symbol = L"@", unsigned char color = YELLOW) : name(name), type(type) {}
@@ -177,6 +178,7 @@ public:
 	int curItemID = 0;
 	int x = 1;
 	int y = 1;
+	int faith = 0;
 	bool attackedThisTurn = false;
 
 	void addItem(std::shared_ptr<Item> item) {

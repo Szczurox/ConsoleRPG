@@ -329,9 +329,15 @@ public:
 
 	virtual std::vector<Tile> summonEntities() {
 		std::vector<Tile> e;
-		int roomType = randMinMax(0, 1);
-		if(roomType == 0)
+		int roomType = randMinMax(0, 2);
+		if (roomType == 0) {
 			randEntity<BloodOath>(e, 1, 1, 1);
+			randEntity<IronShortSword>(e, 1, 1, 6, randMinMax(6, 66));
+		}
+		if (roomType == 1) {
+			randEntity<SacramentalBread>(e, 1, 1, 1);
+			randEntity<HealthPotion>(e, 1, 1, 3);
+		}
 		else {
 			randEntity<HealthPotion>(e, 5, 1, 5);
 			randEntity<IronShortSword>(e, 1, 1, 10, randMinMax(2, 200));

@@ -100,7 +100,7 @@ int startGame() {
 		boards[p.curFloor].boardInit();
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.1.0\nSaving system isn't functional yet.", YELLOW).c_str());
+			write(color(L"Version: 0.1.1\nSaving system isn't functional yet.", YELLOW).c_str());
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
 			bool wait = false;

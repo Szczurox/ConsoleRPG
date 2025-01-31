@@ -127,7 +127,6 @@ public:
 			p.addItem(std::shared_ptr<Item>(new Gambeson(10)));
 			p.addItem(std::shared_ptr<Item>(new WoodenSword(10)));
 			pushRecipies(p);
-			board[2][2] = Tile(std::shared_ptr<Item>(new BloodOath()), 0);
 			board[3][1] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
 			board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
 		}
@@ -185,8 +184,10 @@ public:
 		makeBoxPiece(4, 34);
 		write(color(L"Health: %/%\n", RED).c_str(), p.health, p.maxHealth);
 		makeBoxPiece(5, 34);
+		write(color(L"Faith: %\n", p.faith < 0 ? RED : (p.faith > 0 ? YELLOW : GREY)).c_str(), p.faith);
+		makeBoxPiece(6, 34);
 		write(color(L"Gold: %\n", YELLOW).c_str(), p.gold);
-		makeBoxRoof(6, 34);
+		makeBoxRoof(7, 34);
 	}
 
 	void writeBuff(BuffType type) {
@@ -195,7 +196,7 @@ public:
 		});
 		if (it != p.buffs.end()) {
 			Buff buff = p.buffs[std::distance(p.buffs.begin(), it)];
-			write(color(L" (%% for %)", RED).c_str(), buff.isMultiplier ? L"�" : L"+", buff.amount, buff.duration);
+			write(color(L" (%% for %)", RED).c_str(), buff.isMultiplier ? L"×" : L"+", buff.amount, buff.duration);
 		}
 	}
 
@@ -208,7 +209,7 @@ public:
 		write(color(L"Defence: %", BLUE).c_str(), p.defence);
 		writeBuff(BuffType::PROT);
 		makeBoxPiece(11, 34);
-		write(color(L"Speed: %\n", YELLOW).c_str(), (p.weapon != nullptr ? p.weapon->speed : 1));
+		write(color(L"Speed: %\n", PURPLE).c_str(), (p.weapon != nullptr ? p.weapon->speed : 1));
 		writeBuff(BuffType::SPD);
 		makeBoxRoof(12, 34);
 	}
@@ -235,7 +236,7 @@ public:
 		else if ((ch == 'T' || ch == 't'))
 			move = -2;
 		else
-			switch (_getch()) {
+			switch (ch) {
 			case 72:
 				move = UP;
 				break;
@@ -248,6 +249,8 @@ public:
 			case 75:
 				move = LEFT;
 				break;
+			default:
+				return 0;
 			}
 		int tileX = p.x + dx[move];
 		int tileY = p.y + dy[move];

@@ -332,6 +332,11 @@ public:
 		p->health -= healthChange;
 		p->maxHealth -= healthChange;
 		p->baseDamage += randMinMax(1, 3);
+		if (p->faith < 1) {
+			p->health -= p->health / 2;
+			p->giveBuff(BuffType::DMG, 6, 67);
+		}
+		p->faith -= 1;
 		p->removeItem(name, 1);
 		return 5;
 	}
@@ -346,7 +351,46 @@ public:
 		colord = RED;
 		symbol = L"Ω";
 		stackable = true;
-		cost = 200;
+		cost = 6666;
+		count = cnt;
+	}
+};
+
+class SacramentalBread : public Usable {
+public:
+	virtual int used(Player* p) {
+		if (p->faith < -5) {
+			p->health -= p->health / 2;
+			p->faith++;
+		}
+		else {
+			p->maxHealth += 10 + p->faith;
+			p->health = p->maxHealth;
+		}
+		if (p->faith > -1) 
+			p->giveBuff(BuffType::PROT, 3, 334);
+		else
+			messageType = 1;
+		p->removeItem(name, 1);
+		return 5;
+	}
+
+	virtual void writeMessage() {
+		if(messageType == 0)
+			write(color(L"You feel refreshed and protected.", colord).c_str());
+		else if(messageType == 2)
+			write(L"You ate %.\n%", color(name.c_str(), colord).c_str(), color(L"It hurts...", RED).c_str());
+		else
+			write(L"%%", color(L"You feel refreshed... ", colord).c_str(), color(L"but not protected.", RED).c_str());
+	};
+
+	SacramentalBread(int cnt = 1) {
+		name = L"Sacramental Bread";
+		lore = L"It shines with a bright light";
+		colord = YELLOW;
+		symbol = L"☼";
+		stackable = true;
+		cost = 7777;
 		count = cnt;
 	}
 };
