@@ -25,9 +25,10 @@ public:
 			p->weapon = nullptr;
 		p->removeItem(name, 1, ID);
 	}
-	virtual int itemMenu(Player* p) {
-		MenuItem nameI(name, colord);
-		MenuItem loreI(lore, WHITE);
+
+	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) {
+		MenuItem nameI(name.c_str(), colord);
+		MenuItem loreI(lore.c_str(), WHITE);
 		wchar_t s[256];
 		wsprintf(s, L"Deals %d-%d damage and has %d speed", minDmg, maxDmg, speed);
 		MenuItem damage(s, YELLOW);
@@ -86,9 +87,9 @@ public:
 			p->armor = nullptr;
 		p->removeItem(name, 1, ID);
 	}
-	virtual int itemMenu(Player* p) {
-		MenuItem nameI(name, colord);
-		MenuItem loreI(lore, WHITE);
+	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) {
+		MenuItem nameI(name.c_str(), colord);
+		MenuItem loreI(lore.c_str(), WHITE);
 		wchar_t s[256];
 		wsprintf(s, L"Gives you %d defence", prot);
 		MenuItem prot(s, YELLOW);
@@ -137,9 +138,10 @@ public:
 	virtual void onRemove(Player* p) {
 		p->removeItem(name, count);
 	}
-	virtual int itemMenu(Player* p) {
-		MenuItem nameI(name, colord);
-		MenuItem loreI(lore, WHITE);
+	virtual void writeMessage() { write(L"used!"); };
+	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) {
+		MenuItem nameI(name.c_str(), colord);
+		MenuItem loreI(lore.c_str(), WHITE);
 		wchar_t d[256];
 		wsprintf(d, L"Amount: %d", count);
 		MenuItem coun(d, BRIGHT_BLUE);
@@ -167,9 +169,9 @@ public:
 	virtual void onRemove(Player* p) {
 		p->removeItem(name, count);
 	}
-	virtual int itemMenu(Player* p) {
-		MenuItem nameI(name, colord);
-		MenuItem loreI(lore, WHITE);
+	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) {
+		MenuItem nameI(name.c_str(), colord);
+		MenuItem loreI(lore.c_str(), WHITE);
 		wchar_t d[256];
 		wsprintf(d, L"Amount: %d", count);
 		MenuItem coun(d, BRIGHT_BLUE);
@@ -184,7 +186,6 @@ public:
 };
 
 // Tile items
-
 class GoldPile : public Item {
 public:
 	GoldPile(int minGold, int maxGold) {
@@ -201,12 +202,11 @@ public:
 };
 
 // Weapons
-
 class WoodenSword : public Weapon {
 public:
 	WoodenSword(int dur = 100) {
 		name = L"Wooden Sword";
-		lore = L"Basic wooden sword";
+		lore = L"Simple wooden sword";
 		colord = GREY;
 		symbol = L"┼";
 		minDmg = 3;
@@ -215,7 +215,7 @@ public:
 		reqLevel = 0;
 		durability = dur;
 		maxDurability = 100;
-		cost = 600;
+		cost = 1000;
 	}
 };
 
@@ -223,21 +223,20 @@ class IronShortSword : public Weapon {
 public:
 	IronShortSword(int dur = 200) {
 		name = L"Iron Shortsword";
-		lore = L"Quick weapon";
+		lore = L"Quick weapon, but not very accurate";
 		colord = BRIGHT_BLUE;
 		symbol = L"┼";
-		minDmg = 3;
+		minDmg = 0;
 		maxDmg = 8;
 		speed = 2;
 		reqLevel = 2;
 		durability = dur;
 		maxDurability = 200;
-		cost = 2500;
+		cost = 4000;
 	}
 };
 
 // Armor
-
 class Gambeson : public Armor {
 public:
 	Gambeson(int dur = 200) {
@@ -249,7 +248,7 @@ public:
 		reqLevel = 0;
 		durability = dur;
 		maxDurability = 200;
-		cost = 600;
+		cost = 1000;
 	}
 };
 
@@ -264,12 +263,11 @@ public:
 		reqLevel = 0;
 		durability = dur;
 		maxDurability = 100;
-		cost = 500;
+		cost = 1000;
 	}
 };
 
-// Usables
-
+// Consumables
 class HealthPotion : public Usable {
 public:
 	virtual int used(Player* p) {
@@ -279,9 +277,13 @@ public:
 		return 5;
 	}
 
+	virtual void writeMessage() {
+		write(L"You drank %.\nHealed for 100HP!", color(name.c_str(), colord).c_str());
+	};
+
 	HealthPotion(int cnt = 1) {
 		name = L"Health Potion";
-		lore = L"Heals 100 HP";
+		lore = L"Heals for 100 HP";
 		colord = BRIGHT_BLUE;
 		symbol = L"▲";
 		cost = 500;
@@ -292,22 +294,57 @@ public:
 class ZombieMeat : public Usable {
 public:
 	virtual int used(Player* p) {
-		int random = randMinMax(0, 100);
-		if (random >= 60) {
+		int random = randMinMax(0, 50);
+		int buff = randMinMax(1, 3);
+		if (random >= 80) {
 			p->health += random;
 			if (p->health > p->maxHealth) p->health = p->maxHealth;
 		}
-		else if (random < 40) 
+		else if (random < 60) 
 			p->health -= random;
+		p->giveBuff(BuffType::DMG, buff, 50, false);
 		p->removeItem(name, 1);
 		return 5;
 	}
 
+	virtual void writeMessage() {
+		write(L"You ate %.\nYou feel strange.", color(name.c_str(), colord).c_str());
+	};
+
 	ZombieMeat(int cnt = 1) {
 		name = L"Zombie Meat";
-		lore = L"Who knows what it does";
+		lore = L"The odour is unbearable, but it looks somewhat edible";
 		colord = GREEN;
 		symbol = L"▬";
+		stackable = true;
+		cost = 200;
+		count = cnt;
+	}
+
+private:
+
+};
+
+class BloodOath : public Usable {
+public:
+	virtual int used(Player* p) {
+		int healthChange = randMinMax(5, 20);
+		p->health -= healthChange;
+		p->maxHealth -= healthChange;
+		p->baseDamage += randMinMax(1, 3);
+		p->removeItem(name, 1);
+		return 5;
+	}
+
+	virtual void writeMessage() {
+		write(color(L"There is no going back...", colord).c_str());
+	};
+
+	BloodOath(int cnt = 1) {
+		name = L"Blood Oath";
+		lore = L"You feel dark energy emanating from it";
+		colord = RED;
+		symbol = L"Ω";
 		stackable = true;
 		cost = 200;
 		count = cnt;
@@ -315,7 +352,6 @@ public:
 };
 
 // Resources
-
 class Bone : public Resource {
 public:
 	Bone(int cnt = 1) {
@@ -327,7 +363,5 @@ public:
 		count = cnt;
 	}
 };
-
-
 
 #endif // !ITEMS

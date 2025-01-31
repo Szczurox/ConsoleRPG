@@ -46,7 +46,7 @@ public:
 			if (it->count > 0) {
 				count++;
 				wsprintf(s[count], L"%d gold", it->cost);
-				wsprintf(s[count], L"%s x %d : %s", color(it->name, it->colord).c_str(), it->count, color(s[count], YELLOW).c_str());
+				wsprintf(s[count], L"%s x %d : %s", color(it->name.c_str(), it->colord).c_str(), it->count, color(s[count], YELLOW).c_str());
 				MenuItem itemMenu(2, s[count]);
 				options.push_back(itemMenu);
 			}
@@ -59,7 +59,7 @@ public:
 		while (choice == -3) {
 			choice = menu.open();
 			if (choice >= 0 && choice < options.size() - 1) {
-				const wchar_t* name = inv[choice]->name;
+				const wchar_t* name = inv[choice]->name.c_str();
 				unsigned char col = inv[choice]->colord;
 				int cost = inv[choice]->cost;
 				if (cost <= p->gold) {

@@ -5,6 +5,7 @@ class Board {
 public:
 	std::vector<std::vector<Tile>> board;
 	std::vector<std::shared_ptr<Enemy>> enemies;
+
 	Board(int width, int height, Player& player) : width(width), height(height), p(player), board(width, std::vector<Tile>(height, Tile(TileType::NOTHING, 0))) {
 		std::wcout << L"loading...";
 		std::vector<std::vector<std::shared_ptr<Room>>> rooms;
@@ -12,10 +13,11 @@ public:
 		int lastX = 0;
 		int lastY = 0;
 		int lowY = 0;
+		bool secret = false;
 		p.curRoomNum = 0;
 		// Add data for creating random amount of random rooms
-		for (int i = 0; i < 20; i++) {
-			int roomType = randMinMax(1, 100);
+		for (int i = 0; i < 30; i++) {
+			int roomType = randMinMax(0, 100);
 			int roomWidth = randMinMax(7, 20);
 			int roomHeight = randMinMax(4, 7);
 			// Space between rooms horizontally
@@ -25,7 +27,11 @@ public:
 			if (yRoom >= height) break;
 			if (xRoom < width) {
 				if (i > 0) {
-					if (roomType < 10)
+					if (roomType < 5 && !secret) {
+						curFloor.push_back(std::shared_ptr<Room>(new SecretRoom()));
+						secret = true;
+					}
+					else if (roomType < 10)
 						curFloor.push_back(std::shared_ptr<Room>(new Tresury()));
 					else
 						curFloor.push_back(std::shared_ptr<Room>(new BasicRoom()));
@@ -63,7 +69,7 @@ public:
 					int dJ = j + dx[d];
 					if (dI >= 0 && dJ >= 0 && dI < hSize && dJ < wSize) {
 						rooms[i][j]->neighbours[d] = rooms[dI][dJ]->num;
-						rooms[i][j]->genDoor(d);
+						rooms[i][j]->genDoor(d, rooms[dI][dJ]->type == RoomType::SECRET);
 					}
 				}
 				rooms[i][j]->create(board, enemies, p.curFloor);
@@ -113,6 +119,7 @@ public:
 	void boardInit() {
 		board[p.x][p.y] = Tile(TileType::PLAY, p.curRoomNum, true);
 		if (p.curFloor == 0) {
+			p.giveBuff(BuffType::DMG, 1, 10);
 			std::vector<std::shared_ptr<Item>> shop;
 			shop.push_back(std::shared_ptr<Item>(new WoodenSword()));
 			shop.push_back(std::shared_ptr<Item>(new Gambeson()));
@@ -120,8 +127,9 @@ public:
 			p.addItem(std::shared_ptr<Item>(new Gambeson(10)));
 			p.addItem(std::shared_ptr<Item>(new WoodenSword(10)));
 			pushRecipies(p);
-			board[3][2] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
-			board[4][2] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
+			board[2][2] = Tile(std::shared_ptr<Item>(new BloodOath()), 0);
+			board[3][1] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
+			board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
 		}
 		else {
 			std::vector<std::shared_ptr<Item>> shop;
@@ -130,12 +138,7 @@ public:
 			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
 			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
 			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
-			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
-			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
-			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
-			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
-			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
-			board[4][2] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
+			board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
 		}
 	}
 
@@ -148,76 +151,77 @@ public:
 		}
 	}
 
-	void drawBoardFull() {
+	void drawBoardFull(std::function<void()> info = [](){}) {
+		p.checkBuffs();
 		drawBoard();
 		writeStats();
 		writeStats2();
 		writeStats3();
 		startInfo();
+		info();
+	}
+
+	void makeBoxRoof(int start, int w) {
+		setCursor(width + 1, start);
+		for (int i = 0; i < w; i++)
+			std::wcout << L"=";
+	}
+
+	void makeBoxPiece(int start, int w) {
+		setCursor(width + 1, start);
+		std::wcout << "|";
+		for (int i = 0; i < w - 2; i++)
+			std::wcout << L" ";
+		std::wcout << "|";
+		setCursor(width + 3, start);
 	}
 
 	void writeStats() {
-		setCursor(width + 1, 1);
-		// Remove any character atrifacts that may appear
-		std::wcout << L"============================";
-		setCursor(width + 1, 2);
-		std::wcout << L"|                          |";
-		setCursor(width + 3, 2);
+		makeBoxRoof(1, 34);
+		makeBoxPiece(2, 34);
 		write(color(L"Level: %\n", GREEN).c_str(), p.level);
-		setCursor(width + 1, 3);
-		std::wcout << L"|                          |";
-		setCursor(width + 3, 3);
+		makeBoxPiece(3, 34);
 		write(color(L"Experience: %/%\n", GREEN).c_str(), p.xp, p.expForNext);
-		setCursor(width + 1, 4);
-		std::wcout << L"|                          |";
-		setCursor(width + 3, 4);
+		makeBoxPiece(4, 34);
 		write(color(L"Health: %/%\n", RED).c_str(), p.health, p.maxHealth);
-		setCursor(width + 1, 5);
-		std::wcout << L"|                          |";
-		setCursor(width + 3, 5);
+		makeBoxPiece(5, 34);
 		write(color(L"Gold: %\n", YELLOW).c_str(), p.gold);
-		setCursor(width + 1, 6);
-		std::wcout << L"============================";
+		makeBoxRoof(6, 34);
+	}
+
+	void writeBuff(BuffType type) {
+		auto it = std::find_if(p.buffs.begin(), p.buffs.end(), [type](const Buff& b) {
+			return b.type == type;
+		});
+		if (it != p.buffs.end()) {
+			Buff buff = p.buffs[std::distance(p.buffs.begin(), it)];
+			write(color(L" (%% for %)", RED).c_str(), buff.isMultiplier ? L"�" : L"+", buff.amount, buff.duration);
+		}
 	}
 
 	void writeStats2() {
-		setCursor(width + 1, 8);
-		// Remove any character atrifacts that may appear
-		std::wcout << L"============================";
-		setCursor(width + 1, 9);
-		std::wcout << L"|                          |";
-		setCursor(width + 3, 9);
-		write(color(L"Damage: %-%\n", RED).c_str(), p.minDamage, p.maxDamage);
-		setCursor(width + 1, 10);
-		std::wcout << L"|                          |";
-		setCursor(width + 3, 10);
-		write(color(L"Defence: %\n", BLUE).c_str(), p.defence);
-		setCursor(width + 1, 11);
-		std::wcout << L"|                          |";
-		setCursor(width + 3, 11);
+		makeBoxRoof(8, 34);
+		makeBoxPiece(9, 34);
+		write(color(L"Damage: %-%", RED).c_str(), p.minDamage, p.maxDamage);
+		writeBuff(BuffType::DMG);
+		makeBoxPiece(10, 34);
+		write(color(L"Defence: %", BLUE).c_str(), p.defence);
+		writeBuff(BuffType::PROT);
+		makeBoxPiece(11, 34);
 		write(color(L"Speed: %\n", YELLOW).c_str(), (p.weapon != nullptr ? p.weapon->speed : 1));
-		setCursor(width + 1, 12);
-		std::wcout << L"============================";
+		writeBuff(BuffType::SPD);
+		makeBoxRoof(12, 34);
 	}
 
 	void writeStats3() {
-		setCursor(width + 1, 14);
-		// Remove any character atrifacts that may appear
-		std::wcout << L"============================";
-		setCursor(width + 1, 15);
-		std::wcout << L"|                          |";
-		setCursor(width + 3, 15);
+		makeBoxRoof(14, 34);
+		makeBoxPiece(15, 34);
 		write(color(L"Floor: %\n", YELLOW).c_str(), p.curFloor);
-		setCursor(width + 1, 16);
-		std::wcout << L"|                          |";
-		setCursor(width + 3, 16);
+		makeBoxPiece(16, 34);
 		write(color(L"X: %\n", WHITE).c_str(), p.x);
-		setCursor(width + 1, 17);
-		std::wcout << L"|                          |";
-		setCursor(width + 3, 17);
+		makeBoxPiece(17, 34);
 		write(color(L"Y: %\n", WHITE).c_str(), p.y);
-		setCursor(width + 1, 18);
-		std::wcout << L"============================";
+		makeBoxRoof(18, 34);
 	}
 
 	// Update board on player action
@@ -248,8 +252,8 @@ public:
 		int tileX = p.x + dx[move];
 		int tileY = p.y + dy[move];
 		type = board[tileX][tileY].type;
-		// Press T to wait a turn
 
+		// Press T to wait a turn
 		std::shared_ptr<Enemy> enemy = board[tileX][tileY].enemy;
 		if (move != -2) {
 			std::shared_ptr<Item> item = board[tileX][tileY].item;
@@ -263,9 +267,9 @@ public:
 				// Pick up item if player has free inventory space
 				if (res == 0) {
 					if (item->count > 1)
-						write(L"Picked up % %", item->count, color(item->name, item->colord));
+						write(L"Picked up % %", item->count, color(item->name.c_str(), item->colord));
 					else
-						write(L"Picked up %", color(item->name, item->colord));
+						write(L"Picked up %", color(item->name.c_str(), item->colord));
 					changeTile(tileX, tileY, Tile(p.curRoomNum));
 					writeStats();
 					writeStats3();
@@ -277,7 +281,7 @@ public:
 				}
 				break;
 			}
-			case TileType::NPC: 
+			case TileType::NPC:
 			{
 				InteractionResult res = board[tileX][tileY].interacted(&p);
 				SoldInfo info = res.soldInfo;
@@ -289,7 +293,7 @@ public:
 					write(L" for ");
 					write(color(L"% gold", YELLOW).c_str(), info.cost);
 				}
-				else if(res.result == -2) {
+				else if (res.result == -2) {
 					startInfo();
 					write(L"You don't have enough % to buy %!", color(L"gold", YELLOW), color(info.name, info.color));
 				}
@@ -301,6 +305,7 @@ public:
 				moveEntity(p.x, p.y, move);
 				writeStats3();
 				break;
+			case TileType::SECRET_DOOR:
 			case TileType::DOOR:
 				p.x += dx[move] * 2;
 				p.y += dy[move] * 2;
@@ -359,20 +364,25 @@ public:
 				writeStats();
 				writeStats2();
 			}
-		}
 
-		for (int i = 0; i < 4; i++) {
-			int dX2 = p.x + dx[i];
-			int dY2 = p.y + dy[i];
-			if (isTileValid(dX2, dY2)) {
-				if (board[dX2][dY2].type == TileType::PATH || board[dX2][dY2].type == TileType::DOOR) {
-					board[dX2][dY2].isVisible = true;
-					drawTile(dX2, dY2);
+			for (int i = 0; i < 4; i++) {
+				int dX2 = p.x + dx[i];
+				int dY2 = p.y + dy[i];
+				if (isTileValid(dX2, dY2)) {
+					if (board[dX2][dY2].type == TileType::PATH || board[dX2][dY2].type == TileType::DOOR || board[dX2][dY2].type == TileType::SECRET_DOOR) {
+						board[dX2][dY2].isVisible = true;
+						drawTile(dX2, dY2);
+					}
 				}
 			}
+
+
+			changeTile(p.x, p.y, Tile(TileType::PLAY, p.curRoomNum));
 		}
 
-		changeTile(p.x, p.y, Tile(TileType::PLAY, p.curRoomNum));
+		p.checkBuffs();
+		writeStats();
+		writeStats2();
 
 		if (move != -1)
 			moveEnemies(enemy);
@@ -581,11 +591,11 @@ private:
 		int dX = x + dx[d];
 		int dY = y + dy[d];
 		TileType type = board[dX][dY].type;
-		bool isTypeValid = (type != TileType::DOOR && type != TileType::WALL && type != TileType::NOTHING && type != TileType::ENEM);
+		bool isTypeValid = (type != TileType::DOOR && type != TileType::WALL && type != TileType::NOTHING && type != TileType::ENEM && type != TileType::SECRET_DOOR);
 		for (int i = 0; i < 4; i++) {
 			int dX2 = dX + dx[i];
 			int dY2 = dY + dy[i];
-			if (isTileValid(dX2, dY2) && board[dX2][dY2].type == TileType::DOOR)
+			if (isTileValid(dX2, dY2) && (board[dX2][dY2].type == TileType::DOOR || board[dX2][dY2].type == TileType::SECRET_DOOR))
 				isTypeValid = false;
 		}
 		return (isTypeValid && isTileValid(dX, dY) && type != TileType::NPC);

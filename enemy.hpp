@@ -56,8 +56,8 @@ public:
 		// Player dmg, number of player attacks, enemy dmg, number of enemy attacks
 		std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> attacks({ 0, 1, 0, 1, xp }, {});
 		int pSpeed;
-		if (p->weapon == nullptr) pSpeed = 1;
-		else pSpeed = p->weapon->speed;
+		if (p->weapon == nullptr) pSpeed = p->baseSpeed;
+		else pSpeed = p->weapon->speed + p->baseSpeed;
 		// Player and enemy have same speed
 		if (pSpeed == speed) {
 			// Both attack each other once
@@ -148,12 +148,12 @@ public:
 		symbol = L"☻";
 		nameColor = GREY;
 		color = GREEN;
-		health = 20;
+		health = 30;
 		minDamage = 3;
 		maxDamage = 5;
 		xp = 20;
 		minGold = 30;
-		maxGold = 200;
+		maxGold = 150;
 	}
 
 	virtual std::vector<std::shared_ptr<Item>> getLoot() {
@@ -176,16 +176,16 @@ public:
 		color = RED;
 		health = 20;
 		minDamage = 5;
-		maxDamage = 20;
+		maxDamage = 25;
 		xp = 40;
-		minGold = 100;
-		maxGold = 500;
+		minGold = 1;
+		maxGold = 256;
 	}
 
 	virtual std::vector<std::shared_ptr<Item>> getLoot() {
 		std::vector<std::shared_ptr<Item>> items;
 		randLoot<GoldPile>(items, 4, 1, 2, minGold, maxGold);
-		randLoot<IronShortSword>(items, 1, 1, 50, randMinMax(20, 200));
+		randLoot<IronShortSword>(items, 1, 1, 75, randMinMax(20, 200));
 		return items;
 	}
 };

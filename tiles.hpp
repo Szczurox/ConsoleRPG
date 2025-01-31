@@ -12,7 +12,8 @@ enum class TileType {
 	DOOR = 6,
 	PATH = 7,
 	STAIRS = 8,
-	NPC = 9
+	NPC = 9,
+	SECRET_DOOR = 10,
 };
 
 struct InteractionResult {
@@ -38,7 +39,7 @@ public:
 	Tile(std::shared_ptr<Item> item, int roomNum, bool isVisible = true) : type(TileType::ITEM), item(item), isVisible(isVisible), roomNum(roomNum) {}
 	Tile(std::shared_ptr<Enemy> enemy, int roomNum, bool isVisible = true) : type(TileType::ENEM), enemy(enemy), isVisible(isVisible), roomNum(roomNum) {}
 	Tile(std::shared_ptr<NPC> npc, int roomNum, bool isVisible = true) : type(TileType::NPC), npc(npc), isVisible(isVisible), roomNum(roomNum) {}
-	Tile(bool isDoor, int roomNum, int room, bool isVisible = true) : type(TileType::DOOR), roomNum(roomNum), isVisible(isVisible) {}
+	Tile(bool isDoor, int roomNum, int room, bool isVisible = true, bool isSecret = false) : type(!isSecret ? TileType::DOOR : TileType::SECRET_DOOR), roomNum(roomNum), isVisible(isVisible) {}
 
 	void draw(Player* p) {
 		if (roomNum == p->curRoomNum && type != TileType::PATH) {
@@ -59,7 +60,7 @@ public:
 				break;
 			case TileType::ITEM:
 				if (p->curRoomNum == roomNum) {
-					writeColor(item->symbol, item->colord);
+					writeColor(item->symbol.c_str(), item->colord);
 					break;
 				}
 				std::wcout << L" ";
@@ -85,6 +86,7 @@ public:
 				}
 				std::wcout << L" ";
 				break;
+			case TileType::SECRET_DOOR:
 			case TileType::WALL:
 				writeColor(L"▒", BRIGHT_WHITE);
 				break;
@@ -105,6 +107,8 @@ public:
 	}
 
 	InteractionResult interacted(Player* p, int par = 0) {
+		if (type == TileType::SECRET_DOOR)
+			type = TileType::DOOR;
 		if (type == TileType::DOOR) {
 			if (par == 0)
 				p->curRoomNum = roomNum;
@@ -136,13 +140,15 @@ enum class RoomType {
 	BASIC = 1,
 	TREASURE = 2,
 	STAIR = 3,
+	SECRET = 4,
 };
 
 class Room {
 public:
 	RoomType type = RoomType::BASIC;
-	int doors[4] = { -1, -1, -1, -1 };
+	RoomType neighboursType[4] = { RoomType::BASIC, RoomType::BASIC, RoomType::BASIC, RoomType::BASIC };
 	int neighbours[4] = { -1, -1, -1, -1 };
+	int doors[4] = { -1, -1, -1, -1 };
 	// Top left corner of the room coordinates
 	int x = 0;
 	int y = 0;
@@ -164,11 +170,13 @@ public:
 		bufferX = buffX;
 	}
 	
-	void genDoor(int d) {
+	void genDoor(int d, bool isSecret = false) {
 		if (d < 2)
 			doors[d] = x + rand() % (width - 2) + 1;
 		if (d > 1)
 			doors[d] = y + rand() % (height - 2) + 1;
+		if (isSecret)
+			neighboursType[d] = RoomType::SECRET;
 	}
 
 	virtual std::vector<Tile> summonEntities() {
@@ -198,13 +206,13 @@ public:
 			board[i][yH - 1] = Tile(TileType::WALL, num, false);
 		}
 		if (doors[0] != -1)
-			board[doors[0]][y] = Tile(true, num, neighbours[0], false);
+			board[doors[0]][y] = Tile(true, num, neighbours[0], false, neighboursType[0] == RoomType::SECRET);
 		if (doors[1] != -1)
-			board[doors[1]][yH - 1] = Tile(true, num, neighbours[1], false);
+			board[doors[1]][yH - 1] = Tile(true, num, neighbours[1], false, neighboursType[1] == RoomType::SECRET);
 		if (doors[2] != -1)
-			board[x][doors[2]] = Tile(true, num, neighbours[2], false);
+			board[x][doors[2]] = Tile(true, num, neighbours[2], false, neighboursType[2] == RoomType::SECRET);
 		if (doors[3] != -1)
-			board[xW - 1][doors[3]] = Tile(true, num, neighbours[3], false);
+			board[xW - 1][doors[3]] = Tile(true, num, neighbours[3], false, neighboursType[3] == RoomType::SECRET);
 
 		summonSetEntities(board);
 
@@ -220,7 +228,7 @@ public:
 				for (int i = 0; i < 4; i++) {
 					int dX = randX + dx[i];
 					int dY = randY + dy[i];
-					if (board[dX][dY].type == TileType::DOOR)
+					if (board[dX][dY].type == TileType::DOOR || board[dX][dY].type == TileType::SECRET_DOOR)
 						isNearDoor = true;
 				}
 				if (!isNearDoor && board[randX][randY].type == TileType::NOTHING) {
@@ -312,6 +320,27 @@ public:
 		return e;
 	}
 };
+
+class SecretRoom : public Room {
+public:
+	SecretRoom() {
+		type = RoomType::SECRET;
+	}
+
+	virtual std::vector<Tile> summonEntities() {
+		std::vector<Tile> e;
+		int roomType = randMinMax(0, 1);
+		if(roomType == 0)
+			randEntity<BloodOath>(e, 1, 1, 1);
+		else {
+			randEntity<HealthPotion>(e, 5, 1, 5);
+			randEntity<IronShortSword>(e, 1, 1, 10, randMinMax(2, 200));
+			randEntity<Gambeson>(e, 1, 1, 5 * floor, randMinMax(1, 100));
+		}
+		return e;
+	}
+};
+
 
 class Tresury : public Room {
 public:

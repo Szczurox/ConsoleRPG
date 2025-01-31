@@ -72,6 +72,8 @@ void write(const wchar_t* format, T value, Args ... args) {
 	}
 }
 
+
+
 void setCursor(int col, int row) {
 	std::wprintf(L"\033[%d;%dH\033[?25l", (int)row + 1, (int)col + 1);
 }

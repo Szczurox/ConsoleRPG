@@ -10,11 +10,17 @@ enum class ItemType {
 	USABLE = 3
 };
 
+enum class BuffType {
+	DMG = 0,
+	SPD = 1,
+	PROT = 2,
+};
+
 class Item {
 public:
-	const wchar_t* name = L"";
-	const wchar_t* symbol = L"@";
-	const wchar_t* lore = L"";
+	std::wstring name = L"";
+	std::wstring symbol = L"@";
+	std::wstring lore = L"";
 	unsigned char colord = YELLOW;
 	ItemType type = ItemType::RESOURCE;
 	bool stackable = true;
@@ -28,18 +34,20 @@ public:
 	int maxDurability = 0;
 	int cost = 0;
 	int ID = 0;
+
 	Item() {}
 	Item(const wchar_t* name, ItemType type, const wchar_t* symbol = L"@", unsigned char color = YELLOW) : name(name), type(type) {}
 	// 1 - Add to inventory
 	virtual int picked(Player* player) { return 1; }
 	virtual int used(Player* player) { return 0; }
-	virtual int menuHandle(Player* p, std::vector<MenuItem>& options, std::vector<MenuItem>& texts) {
+	virtual void writeMessage() { return; };
+	virtual std::pair<int, std::function<void()>> menuHandle(Player* p, std::vector<MenuItem>& options, std::vector<MenuItem>& texts) {
 		Menu menu(&options, &texts, true);
 		int choice = -2;
 		while (choice == -2) {
 			choice = menu.open();
 			if (choice == 0 && options.size() == 3)
-				return used(p);
+				return { used(p), [this]() { this->writeMessage(); } };
 			if ((choice == 1 && options.size() == 3) || (choice == 0 && options.size() == 2)) {
 				MenuItem option(L"Are you sure you want to destroy this item?", RED);
 				MenuItem no(L"No", WHITE);
@@ -51,13 +59,14 @@ public:
 					choice = -2;
 				else {
 					onRemove(p);
-					return -1;
+					return { -1, [this]() { this->writeMessage(); } };
 				}
 			}
 		}
-		return 0;
+		return { 0, [this]() { this->writeMessage(); } };
 	}
-	virtual int itemMenu(Player* p) { return 0; }
+
+	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) { return {}; }
 	virtual void onRemove(Player* p) { }
 };
 
@@ -75,15 +84,15 @@ public:
 	virtual std::shared_ptr<Item> craft(std::map<std::wstring, std::shared_ptr<Item>>& inv, int& curID, int& invTaken) {
 		std::vector<MenuItem> texts = std::vector<MenuItem>();
 		std::vector<MenuItem> options = std::vector<MenuItem>();
-		texts.push_back(MenuItem(item->name, item->colord));
-		texts.push_back(MenuItem(item->lore, WHITE));
+		texts.push_back(MenuItem(item->name.c_str(), item->colord));
+		texts.push_back(MenuItem(item->lore.c_str(), WHITE));
 		// Max 10 different ingredients
 		wchar_t s[10][128];
 		int check = 0;
 		int count = 0;
 		for (auto req : items) {
 			wsprintf(s[count], L"(0/%d)", req->count);
-			wsprintf(s[count], L"%s %s", color(req->name, req->colord).c_str(), color(s[count], RED).c_str());
+			wsprintf(s[count], L"%s %s", color(req->name.c_str(), req->colord).c_str(), color(s[count], RED).c_str());
 			texts.push_back(MenuItem(2, s[count]));
 			for (auto item : inv) {
 				std::shared_ptr<Item> it = item.second;
@@ -92,7 +101,7 @@ public:
 				if (nameReq == nameIt) {
 					bool enough = it->count >= req->count;
 					wsprintf(s[count], L"(%d/%d)", it->count, req->count);
-					wsprintf(s[count], L"%s %s", color(req->name, req->colord).c_str(), color(s[count], enough ? GREEN : RED).c_str());
+					wsprintf(s[count], L"%s %s", color(req->name.c_str(), req->colord).c_str(), color(s[count], enough ? GREEN : RED).c_str());
 					count++;
 					if (enough)
 						check++;
@@ -128,11 +137,23 @@ public:
 	};
 };
 
+class Buff {
+public:
+	BuffType type;
+	int amount;
+	int duration;
+	bool isMultiplier;
+	bool isBuffing = false;
+
+	Buff(BuffType type, float amount, int duration, int isMultiplier = false) : type(type), amount(amount), duration(duration), isMultiplier(isMultiplier) {};
+	void tick() { duration--;  };
+};
 
 class Player {
 public:
 	std::map<std::wstring, std::shared_ptr<Item>> inv;
 	std::vector<std::shared_ptr<Recipe>> recipes;
+	std::vector<Buff> buffs = {};
 	std::shared_ptr<Item> weapon = nullptr;
 	std::shared_ptr<Item> armor = nullptr;
 	const int maxInvSpace = 37;
@@ -142,16 +163,21 @@ public:
 	int baseDamage = 1;
 	int minDamage = 1;
 	int maxDamage = 1;
+	int buffDamage = 0;
 	int defence = 0;
+	int buffDefence = 0;
+	int baseSpeed = 1;
+	int buffSpeed = 0;
 	int gold = 0;
 	int xp = 0;
 	int expForNext = 100;
-	int level = 2;
+	int level = 1;
 	int curRoomNum = 0;
 	int curFloor = 0;
 	int curItemID = 0;
 	int x = 1;
 	int y = 1;
+	bool attackedThisTurn = false;
 
 	void addItem(std::shared_ptr<Item> item) {
 		if (item->stackable) {
@@ -195,14 +221,14 @@ public:
 			durColor = YELLOW;
 		if (item->durability * 100 / item->maxDurability > 60)
 			durColor = GREEN;
-		wsprintf(s, L"%ls (%ls)%ls", color(item->name, item->colord).c_str(), color(s, durColor).c_str(), color(selected ? L" ▼" : L"  ", YELLOW).c_str());
+		wsprintf(s, L"%ls (%ls)%ls", color(item->name.c_str(), item->colord).c_str(), color(s, durColor).c_str(), color(selected ? L" ▼" : L"  ", YELLOW).c_str());
 		return 3;
 	}
 
 	// Create char array for stackable item for inventory menu
 	int itemCharStack(wchar_t s[128], std::shared_ptr<Item> item) {
 		wsprintf(s, L"%d", item->count);
-		wsprintf(s, L"%s x %s", color(item->name, item->colord).c_str(), color(s, WHITE).c_str());
+		wsprintf(s, L"%s x %s", color(item->name.c_str(), item->colord).c_str(), color(s, WHITE).c_str());
 		return 2;
 	}
 
@@ -235,7 +261,7 @@ public:
 	}
 
 	// I - show inventory
-	void showInventory() {
+	std::function<void()> showInventory() {
 		std::vector<MenuItem> items = std::vector<MenuItem>();
 		std::vector<std::shared_ptr<Item>> trueItems = std::vector<std::shared_ptr<Item>>();
 		wchar_t s[38][128];
@@ -263,6 +289,8 @@ public:
 		// Close inventory button
 		items.push_back(MenuItem(L"Back", WHITE));
 
+		std::function<void()> writeMessage = [](){};
+
 		Menu inventory(&items, title);
 		int choice = 0;
 		while (choice != -1 && choice < trueItems.size()) {
@@ -270,12 +298,12 @@ public:
 			if (choice != -1 && choice < trueItems.size()) {
 				std::shared_ptr<Item> item = trueItems[choice];
 				// Item menu
-				int result = item->itemMenu(this);
+				std::pair<int, std::function<void()>> result = item->itemMenu(this);
 				// Update menu after item got destroyed
-				if (result == -1)
+				if (result.first == -1)
 					removeElement(choice, s, items, trueItems, inventory);
 				// Equip weapon
-				else if (result == 1) {
+				else if (result.first == 1) {
 					// Update previously equiped
 					for (int i = 0; i < trueItems.size(); i++)
 						if (trueItems[i] == weapon)
@@ -283,7 +311,7 @@ public:
 					weapon = item;
 				}
 				// Equip armor
-				else if (result == 2) {
+				else if (result.first == 2) {
 					// Update previously equiped
 					for (int i = 0; i < trueItems.size(); i++)
 						if (trueItems[i] == armor)
@@ -291,12 +319,13 @@ public:
 					armor = item;
 				}
 				// Unequip weapon/armor
-				else if (result == 3 || result == 4) {
-					if (result == 3) weapon = nullptr;
-					else if (result == 4) armor = nullptr;
+				else if (result.first == 3 || result.first == 4) {
+					if (result.first == 3) weapon = nullptr;
+					else if (result.first == 4) armor = nullptr;
 					itemChar(s[choice], item, false);
 				}
-				else if (result == 5) {
+				else if (result.first == 5) {
+					writeMessage = result.second;
 					if (item->count > 0) 
 						itemCharStack(s[choice], item);
 					else
@@ -307,6 +336,7 @@ public:
 					itemChar(s[choice], item, true);
 			}
 		}
+		return writeMessage;
 	}
 
 
@@ -317,11 +347,11 @@ public:
 		wchar_t s[recipesSize+1][128]; 
 
 		for (auto recipe : recipes) {
-			wsprintf(s[items.size()], L"%s", color(recipe->item->name, recipe->item->colord).c_str());
+			wsprintf(s[items.size()], L"%s", color(recipe->item->name.c_str(), recipe->item->colord).c_str());
 			items.push_back(MenuItem(1, s[items.size()]));
 		}
 
-		wsprintf(s[recipesSize], L"Recipes");
+		wsprintf(s[recipesSize], L"Recipes ");
 		MenuItem title(s[recipesSize], BRIGHT_CYAN);
 
 		items.push_back(MenuItem(L"Back", WHITE));
@@ -345,6 +375,21 @@ public:
 		baseDamage += 1;
 		maxHealth += 10;
 		health = maxHealth;
+	}
+
+	void updateStats() {
+		if (armor != nullptr) 
+			defence = armor->prot + buffDefence;
+		else
+			defence = buffDefence;
+		if (weapon != nullptr) {
+			minDamage = weapon->minDmg + baseDamage + buffDamage;
+			maxDamage = weapon->maxDmg + baseDamage + buffDamage;
+		}
+		else {
+			minDamage = baseDamage + buffDamage;
+			maxDamage = baseDamage + buffDamage;
+		}
 	}
 
 	void checkLevelUp() {
@@ -379,8 +424,62 @@ public:
 		}
 		return randMinMax(minDamage, maxDamage);
 	}
-};
 
+	void giveBuff(BuffType type, float amount, int duration, int isMultiplier = false) {
+		buffs.push_back(Buff(type, amount, duration, isMultiplier));
+	}
+    
+	void buffStat(bool isBuff, std::vector<int*>& stats, Buff& buff) {
+		for (int* stat : stats) {
+			if (buff.isMultiplier) {
+				if (isBuff) *stat *= buff.amount;
+				else *stat /= buff.amount;
+			}
+			else {
+				if (isBuff) *stat += buff.amount;
+				else *stat -= buff.amount;
+			}
+		}
+		buff.isBuffing = true;
+	}
+
+	void checkBuffs() {
+		updateStats();
+
+		for (int i = 0; i < buffs.size(); i++) {
+			std::vector<int*> stats = {};
+			Buff& buff = buffs[i];
+
+			if (!buff.isBuffing || buff.duration <= 0) {
+				switch (buff.type) {
+				case BuffType::DMG:
+					stats = { &buffDamage };
+					buffStat(buff.duration > 0, stats, buff);
+					break;
+				case BuffType::SPD:
+					stats = { &buffSpeed };
+					buffStat(buff.duration > 0, stats, buff);
+					break;
+				case BuffType::PROT:
+					stats = { &buffDefence };
+					buffStat(buff.duration > 0, stats, buff);
+					break;
+				default:
+					break;
+				}
+			}
+
+			updateStats();
+
+			if (buff.duration <= 0) {
+				buffs.erase(buffs.begin() + i);
+				return;
+			}
+
+			buff.tick();
+		}
+	}
+};
 
 
 #endif // !PLAYER

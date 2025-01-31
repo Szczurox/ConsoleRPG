@@ -10,11 +10,12 @@
 #include<array>
 #include<memory>
 #include<algorithm>
+#include<functional>
 #include<fcntl.h>
 #include<io.h>
 
-#define B_HEIGHT 23
-#define B_WIDTH 90
+#define B_HEIGHT 30
+#define B_WIDTH 100
 
 #include"utils.hpp"
 #include"menu.hpp"
@@ -43,9 +44,9 @@ int main() {
 	// Clear the entire screen
 	system("cls");
 
-	MenuItem title(L"Console RPG", BRIGHT_CYAN);
+	MenuItem title(L"Console RPG ", BRIGHT_CYAN);
 	MenuItem newGame(L"New Game", BRIGHT_GREEN);
-	MenuItem loadSave(L"Load Save", YELLOW);
+	MenuItem loadSave(L"Continue", YELLOW);
 	MenuItem info(L"Info", BRIGHT_BLUE);
 	MenuItem exit(L"Exit", RED);
 	std::vector<MenuItem> mainOpts = { newGame, loadSave, info, exit };
@@ -99,7 +100,7 @@ int startGame() {
 		boards[p.curFloor].boardInit();
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.0.9\nSaving system isn't functional yet.", YELLOW).c_str());
+			write(color(L"Version: 0.1.0\nSaving system isn't functional yet.", YELLOW).c_str());
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
 			bool wait = false;
@@ -117,9 +118,9 @@ int startGame() {
 					}
 					else if (ch == 'I' || ch == 'i') {
 						setWindow((int)B_WIDTH, (int)B_HEIGHT);
-						p.showInventory();
+					    std::function<void()> info = p.showInventory();
 						setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
-						boards[p.curFloor].drawBoardFull();
+						boards[p.curFloor].drawBoardFull(info);
 					}
 					else if (ch == 'C' || ch == 'c') {
 						setWindow((int)B_WIDTH, (int)B_HEIGHT);
@@ -154,6 +155,10 @@ int startGame() {
 	return 0;
 }
 
+void initSave() {
+
+}
+
 int drawEscMenu() {
 	MenuItem title(L"", BRIGHT_CYAN);
 	MenuItem back(L"Back To Game", BRIGHT_GREEN);
@@ -169,6 +174,7 @@ int drawEscMenu() {
 		switch (choice)
 		{
 		case 1:
+			initSave();
 			break;
 		case 2:
 			infoMenu();
