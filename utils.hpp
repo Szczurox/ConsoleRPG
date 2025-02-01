@@ -72,8 +72,6 @@ void write(const wchar_t* format, T value, Args ... args) {
 	}
 }
 
-
-
 void setCursor(int col, int row) {
 	std::wprintf(L"\033[%d;%dH\033[?25l", (int)row + 1, (int)col + 1);
 }
@@ -110,6 +108,32 @@ void setWindow(int width, int height) {
 	SetConsoleScreenBufferSize(Handle, coord);         // Set Buffer Size 
 	SetConsoleWindowInfo(Handle, TRUE, &rect);         // Set Window Size 
 	ShowScrollBar(GetConsoleWindow(), SB_BOTH, 0);     // Hide Scrollbar
+}
+
+std::vector<std::wstring> getFilesWithPrefix(const std::wstring& dirPath, const std::wstring& prefix) {
+	std::vector<std::wstring> files;
+
+	WIN32_FIND_DATA findFileData;
+	HANDLE hFind = FindFirstFile((dirPath + L"\\*").c_str(), &findFileData);
+
+	if (hFind == INVALID_HANDLE_VALUE) {
+		std::cerr << "Invalid directory path!" << std::endl;
+		return files;
+	}
+
+	do {
+		if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			continue;  // Skip directories
+
+		std::wstring fileName = findFileData.cFileName;
+
+		if (fileName.find(prefix) == 0)
+			files.push_back(fileName);
+
+	} while (FindNextFile(hFind, &findFileData) != 0);
+
+	FindClose(hFind);
+	return files;
 }
 
 #endif // !UTILS

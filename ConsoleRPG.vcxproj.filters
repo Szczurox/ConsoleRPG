@@ -47,5 +47,8 @@
     <ClInclude Include="crafting.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="effective.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -110,7 +110,7 @@ private:
 			while (m.text[size] != '\0') size++;
 			setCursor((B_WIDTH - 10) / 2 - size / 2 + m.colorsCount * 9, i);
 			if (m.color != 0)
-				wprintf(L"   \033[97;%dm%ls\033[m\n\033[?25l", m.color, m.text);
+				wprintf(L"  \033[97;%dm%ls\033[m\n\033[?25l", m.color, m.text);
 			else
 				wprintf(L"  %ls\n\033[?25l", m.text);
 		}

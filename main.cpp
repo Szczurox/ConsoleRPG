@@ -1,24 +1,29 @@
-#include<Windows.h>
-#include<vector>
-#include<cstdlib>
-#include<iostream>
-#include<conio.h>
-#include<map>
-#include<minmax.h>
-#include<cstdarg>
-#include<sstream>
-#include<array>
-#include<memory>
-#include<algorithm>
 #include<functional>
+#include<filesystem>
+#include<Windows.h>
+#include<algorithm>
+#include<iostream>
+#include<minmax.h>
+#include<direct.h>
+#include<conio.h>
 #include<fcntl.h>
+#include<fstream>
+#include<cstdarg>
+#include<cstdlib>
+#include<sstream>
+#include<codecvt>
+#include<vector>
+#include<memory>
+#include<array>
 #include<io.h>
+#include<map>
 
 #define B_HEIGHT 30
 #define B_WIDTH 100
 
 #include"utils.hpp"
 #include"menu.hpp"
+#include"effective.hpp"
 #include"player.hpp"
 #include"items.hpp"
 #include"crafting.hpp"
@@ -27,23 +32,31 @@
 #include"tiles.hpp"
 #include"board.hpp"
 
+ItemFactory iFactory;
+EnemyFactory eFactory;
+NPCFactory nFactory;
+
 bool isRunning = true;
 
-int startGame();
+unsigned int seed;
+
+int startGame(bool load);
 int drawEscMenu();
 bool drawDeadMenu();
 void infoMenu();
+void registerItems();
+void registerEnemies();
+void registerNPCs();
+void registerAll();
 
 
 int main() {
 	_setmode(_fileno(stdout), _O_U8TEXT);
-	srand((unsigned int)time(NULL));
 	setWindow((int)B_WIDTH, (int)B_HEIGHT);
 	// Hide the console cursor
 	std::wcout << L"\033[?25l";
 	// Clear the entire screen
 	system("cls");
-
 	MenuItem title(L"Console RPG ", BRIGHT_CYAN);
 	MenuItem newGame(L"New Game", BRIGHT_GREEN);
 	MenuItem loadSave(L"Continue", YELLOW);
@@ -59,10 +72,10 @@ int main() {
 		switch (choice)
 		{
 		case 0:
-			res = startGame();
+			res = startGame(false);
 			break;
 		case 1:
-			res = startGame();
+			res = startGame(true);
 			break;
 		case 2:
 			infoMenu();
@@ -81,26 +94,51 @@ int main() {
 }
 
 
-int startGame() {
+int startGame(bool load = false) {
 	isRunning = true;
 	bool isOnCurrentBoard = true;
 
-	setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
-	system("cls");
+	if (load == false)
+		seed = (unsigned int)time(NULL);
 
 	// Player Variables
 	Player p;
 
+	registerAll();
+	pushRecipies(p);
+
+	if (load) 
+		seed = p.load(L"save/player.sav", iFactory);
+
+	srand(seed);
+
+	p.seed = seed;
+
 	// Board Variables
 	std::vector<Board> boards;
-	
+
+	if(load)
+		for (std::wstring file : getFilesWithPrefix(L"save", L"board")) {
+			Board b(B_WIDTH, B_HEIGHT, p, true);
+			b.load(L"save/" + file, iFactory, eFactory, nFactory);
+			boards.push_back(b);
+		}
+
+	setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
+	system("cls");
+
 	while (isRunning) {
-		Board b(B_WIDTH, B_HEIGHT, p);
-		boards.push_back(b);
-		boards[p.curFloor].boardInit();
+		if (!load) {
+			Board b(B_WIDTH, B_HEIGHT, p);
+			boards.push_back(b);
+			boards[p.curFloor].boardInit();
+		}
+		load = false;
+
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.1.1\nSaving system isn't functional yet.", YELLOW).c_str());
+			write(color(L"Version: 0.2.0\nSaving fully functional!", YELLOW).c_str());
+
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
 			bool wait = false;
@@ -112,9 +150,20 @@ int startGame() {
 					// Esc
 					if (ch == 27) {
 						setWindow((int)B_WIDTH, (int)B_HEIGHT);
-						drawEscMenu();
+						int res = drawEscMenu();
 						setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
+						if (res == 1) {
+							system("cls");
+							write(L"Saving...");
+							p.save(L"save/player.sav");
+							for(int i = 0; i < boards.size(); i++)
+								boards[i].save(L"save/board" + std::to_wstring(i) + L".sav");
+						}
 						boards[p.curFloor].drawBoardFull();
+						if (res == 1) {
+							boards[p.curFloor].startInfo();
+							write(color(L"Game saved successfully.", YELLOW).c_str());
+						}
 					}
 					else if (ch == 'I' || ch == 'i') {
 						setWindow((int)B_WIDTH, (int)B_HEIGHT);
@@ -155,10 +204,6 @@ int startGame() {
 	return 0;
 }
 
-void initSave() {
-
-}
-
 int drawEscMenu() {
 	MenuItem title(L"", BRIGHT_CYAN);
 	MenuItem back(L"Back To Game", BRIGHT_GREEN);
@@ -174,7 +219,7 @@ int drawEscMenu() {
 		switch (choice)
 		{
 		case 1:
-			initSave();
+			return 1;
 			break;
 		case 2:
 			infoMenu();
@@ -212,16 +257,56 @@ bool drawDeadMenu() {
 }
 
 void infoMenu() {
-	MenuItem text(L"W / Up Arrow - Up", WHITE);
+	wchar_t seedStr[256];
+	swprintf_s(seedStr, L" Seed: %d", seed);
+	MenuItem text0(L" Controls", WHITE);
+	MenuItem text1(L"W / Up Arrow - Up", WHITE);
 	MenuItem text2(L"S / Down Arrow - Down", WHITE);
 	MenuItem text3(L"A / Left Arrow - Left", WHITE);
 	MenuItem text4(L"D / Right Arrow - Right", WHITE);
 	MenuItem text5(L"I - Inventory", WHITE);
 	MenuItem text6(L"C - Crafting", WHITE);
 	MenuItem text7(L"Esc - Back / Open Escape Menu", WHITE);
+	MenuItem text8(L" ", WHITE);
+	MenuItem text9(L"Stats", WHITE);
+	MenuItem text10(seedStr, YELLOW);
 	MenuItem back(L"Back", WHITE);
 	std::vector<MenuItem> options({ back });
-	std::vector<MenuItem> texts({ text, text2, text3, text4, text5, text6 });
+	std::vector<MenuItem> texts({ text0, text1, text2, text3, text4, text5, text6, text7, text8, text9, text10 });
 	Menu infoMenu(&options, &texts, true);
 	infoMenu.open();
+}
+
+void registerItems() {
+	// Tile items
+	iFactory.registerItem<GoldPile>();
+	// Weapons
+	iFactory.registerItem<WoodenSword>();
+	iFactory.registerItem<IronShortsword>();
+	// Armor
+	iFactory.registerItem<Gambeson>();
+	iFactory.registerItem<BoneArmor>();
+	// Consumables
+	iFactory.registerItem<HealthPotion>();
+	iFactory.registerItem<ZombieMeat>();
+	iFactory.registerItem<BloodOath>();
+	iFactory.registerItem<SacramentalBread>();
+	// Resources
+	iFactory.registerItem<Bone>();
+}
+
+void registerEnemies() {
+	eFactory.registerEnemy<Skeleton>();
+	eFactory.registerEnemy<Zombie>();
+	eFactory.registerEnemy<Assassin>();
+}
+
+void registerNPCs() {
+	nFactory.registerNPC<Shop>();
+}
+
+void registerAll() {
+	registerItems();
+	registerEnemies();
+	registerNPCs();
 }

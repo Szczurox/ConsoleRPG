@@ -8,7 +8,8 @@ public:
 		return std::shared_ptr<Item>(new BoneArmor());
 	}
 
-	BARecipe() {
+	BARecipe(bool unl = false) {
+		unlocked = unl;
 		item = std::shared_ptr<Item>(new BoneArmor());
 		items = std::vector<std::shared_ptr<Item>>();
 		items.push_back(std::shared_ptr<Item>(new Bone(30)));
@@ -16,7 +17,7 @@ public:
 };
 
 void pushRecipies(Player& p) {
-	p.recipes.push_back(std::shared_ptr<Recipe>(new BARecipe()));
+	p.addRecipe<BARecipe>(true);
 }
 
 #endif // !CRAFT

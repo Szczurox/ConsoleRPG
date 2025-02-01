@@ -1,6 +1,8 @@
 ﻿#ifndef TILES
 #define TILES
 
+class ItemFactory;
+
 // Tiles
 enum class TileType {
 	EMPTY = 0,
@@ -130,11 +132,64 @@ public:
 			return InteractionResult(enemy->attacked(p));
 		return InteractionResult(0);
 	}
+
+	// Class name of the tile
+	virtual int getType() const {
+		return static_cast<int>(type);
+	}
+
+	void save(std::ostream& os) {
+		os << getType() << " " << roomNum << " " << isVisible << "\n";
+		if (item != nullptr) {
+			os << "Item ";
+			item->save(os);
+		}
+		else if (enemy != nullptr) {
+			os << "Enemy ";
+			enemy->save(os);
+		}
+		else if (npc != nullptr) {
+			os << "NPC ";
+			npc->save(os);
+		}
+		os << "NextTile\n";
+	}
+
+	std::shared_ptr<Enemy> load(std::ifstream& in, ItemFactory& iFactory, EnemyFactory& eFactory, NPCFactory& nFactory) {
+		int tempType;
+		in >> tempType >> roomNum >> isVisible;
+		type = static_cast<TileType>(tempType);
+		std::string line = "";
+		std::shared_ptr<Enemy> e = nullptr;
+
+		while (std::getline(in, line) && line != "NextTile") {
+			std::istringstream iss(line);
+			std::string type;
+			std::string objectType;
+
+			iss >> type >> objectType;
+
+			if (type == "Item") {
+				item = iFactory.createItem(objectType);
+				item->load(iss);
+			}
+			if (type == "NPC") {
+				npc = nFactory.createNPC(objectType);
+				npc->load(in, iFactory);
+			}
+			if (type == "Enemy") {
+				enemy = eFactory.createEnemy(objectType);
+				enemy->load(iss);
+				e = enemy;
+			}
+		}
+
+		return enemy;
+	}
 };
 
 
 // Rooms
-
 enum class RoomType {
 	ENTRANCE = 0,
 	BASIC = 1,
@@ -332,7 +387,7 @@ public:
 		int roomType = randMinMax(0, 2);
 		if (roomType == 0) {
 			randEntity<BloodOath>(e, 1, 1, 1);
-			randEntity<IronShortSword>(e, 1, 1, 6, randMinMax(6, 66));
+			randEntity<IronShortsword>(e, 1, 1, 6, randMinMax(6, 66));
 		}
 		if (roomType == 1) {
 			randEntity<SacramentalBread>(e, 1, 1, 1);
@@ -340,7 +395,7 @@ public:
 		}
 		else {
 			randEntity<HealthPotion>(e, 5, 1, 5);
-			randEntity<IronShortSword>(e, 1, 1, 10, randMinMax(2, 200));
+			randEntity<IronShortsword>(e, 1, 1, 10, randMinMax(2, 200));
 			randEntity<Gambeson>(e, 1, 1, 5 * floor, randMinMax(1, 100));
 		}
 		return e;
@@ -360,7 +415,7 @@ public:
 		randEntity<GoldPile>(e, 3, 1, 1, 1 * floor, 100 * floor);
 		randEntity<GoldPile>(e, 5, 1, 4, 1 * floor, 100 * floor);
 		randEntity<HealthPotion>(e, 5, 1, 5);
-		randEntity<IronShortSword>(e, 1, 1, 10, randMinMax(20, 200));
+		randEntity<IronShortsword>(e, 1, 1, 10, randMinMax(20, 200));
 		randEntity<Gambeson>(e, 1, 1, 5 * floor, randMinMax(1, 100));
 		return e;
 	}

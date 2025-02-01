@@ -188,7 +188,7 @@ public:
 // Tile items
 class GoldPile : public Item {
 public:
-	GoldPile(int minGold, int maxGold) {
+	GoldPile(int minGold = 1, int maxGold = 1) {
 		type = ItemType::RESOURCE;
 		name = L"gold";
 		count = randMinMax(minGold, maxGold);
@@ -219,9 +219,9 @@ public:
 	}
 };
 
-class IronShortSword : public Weapon {
+class IronShortsword : public Weapon {
 public:
-	IronShortSword(int dur = 200) {
+	IronShortsword(int dur = 200) {
 		name = L"Iron Shortsword";
 		lore = L"Quick weapon, but not very accurate";
 		colord = BRIGHT_BLUE;
@@ -286,6 +286,7 @@ public:
 		lore = L"Heals for 100 HP";
 		colord = BRIGHT_BLUE;
 		symbol = L"▲";
+		stackable = true;
 		cost = 500;
 		count = cnt;
 	}
@@ -320,9 +321,6 @@ public:
 		cost = 200;
 		count = cnt;
 	}
-
-private:
-
 };
 
 class BloodOath : public Usable {

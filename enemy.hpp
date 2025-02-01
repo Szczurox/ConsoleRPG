@@ -111,11 +111,49 @@ public:
 
 		return attacks;
 	}
+	// Class name of the enemy
+	virtual std::string getType() const {
+		std::string typeName = typeid(*this).name();
+		if (typeName.rfind("class ", 0) == 0)
+			typeName = typeName.substr(6);
+		return typeName;
+	}
+
+	virtual void save(std::ostream& os) {
+		os << getType() << " " << x << " " << y << " " << roomNum << "\n";
+	}
+
+	virtual void load(std::istringstream& in) {
+		in >> x >> y >> roomNum;
+	}
 };
+
+
+class EnemyFactory {
+public:
+	std::map<std::string, std::function<std::shared_ptr<Enemy>()>> enemyMap;
+
+	EnemyFactory() {};
+
+	std::shared_ptr<Enemy> createEnemy(const std::string& type) {
+		return enemyMap[type]();
+	}
+
+	template <class T>
+	void registerEnemy() {
+		std::string type = typeid(T).name();
+		if (type.rfind("class ", 0) == 0)
+			type = type.substr(6);
+		enemyMap[type] = []() -> std::shared_ptr<Enemy> {
+			return std::make_shared<T>();
+		};
+	}
+};
+
 
 class Skeleton : public Enemy {
 public:
-	Skeleton(int xC, int yC, int num) {
+	Skeleton(int xC = 0, int yC = 0, int num = 0) {
 		x = xC;
 		y = yC;
 		roomNum = num;
@@ -140,7 +178,7 @@ public:
 
 class Zombie : public Enemy {
 public:
-	Zombie(int xC, int yC, int num) {
+	Zombie(int xC = 0, int yC = 0, int num = 0) {
 		x = xC;
 		y = yC;
 		roomNum = num;
@@ -166,7 +204,7 @@ public:
 
 class Assassin : public Enemy {
 public:
-	Assassin(int xC, int yC, int num) {
+	Assassin(int xC = 0, int yC = 0, int num = 0) {
 		x = xC;
 		y = yC;
 		roomNum = num;
@@ -185,11 +223,9 @@ public:
 	virtual std::vector<std::shared_ptr<Item>> getLoot() {
 		std::vector<std::shared_ptr<Item>> items;
 		randLoot<GoldPile>(items, 4, 1, 2, minGold, maxGold);
-		randLoot<IronShortSword>(items, 1, 1, 75, randMinMax(20, 200));
+		randLoot<IronShortsword>(items, 1, 1, 75, randMinMax(20, 200));
 		return items;
 	}
 };
-
-
 
 #endif // !ENEMY

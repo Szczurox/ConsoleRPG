@@ -22,10 +22,68 @@ public:
 	virtual SoldInfo interacted(Player* p) { return SoldInfo(); }
 
 	NPC() {};
+
+	// Class name of the NPC
+	virtual std::string getType() const {
+		std::string typeName = typeid(*this).name();
+		if (typeName.rfind("class ", 0) == 0)
+			typeName = typeName.substr(6);
+		return typeName;
+	}
+
+	void save(std::ostream& os) {
+		os << getType() << "\n";
+		for (std::shared_ptr<Item> it : inv)
+			it->save(os);
+		os << "EndNPC\n";
+	}
+
+	void load(std::ifstream& in, ItemFactory& iFactory) {
+		std::string line;
+
+		while (std::getline(in, line) && line != "EndNPC") {
+			std::istringstream iss(line);
+			std::string itemType;
+			iss >> itemType;
+			std::shared_ptr<Item> item = iFactory.createItem(itemType);
+			item->load(iss);
+			inv.push_back(item);
+		}
+	}
 };
+
+
+class NPCFactory {
+public:
+	std::map<std::string, std::function<std::shared_ptr<NPC>()>> NPCMap;
+
+	NPCFactory() {};
+
+	std::shared_ptr<NPC> createNPC(const std::string& type) {
+		return NPCMap[type]();
+	}
+
+	template <class T>
+	void registerNPC() {
+		std::string type = typeid(T).name();
+		if (type.rfind("class ", 0) == 0)
+			type = type.substr(6);
+		NPCMap[type] = []() -> std::shared_ptr<NPC> {
+			return std::make_shared<T>();
+		};
+	}
+};
+
 
 class Shop : public NPC {
 public:
+	Shop() {
+		name = L"Shopkeeper";
+		symbol = L"☻";
+		nameColor = YELLOW;
+		colord = YELLOW;
+	}
+
 	Shop(std::vector<std::shared_ptr<Item>> inventory) {
 		inv = inventory;
 		name = L"Shopkeeper";

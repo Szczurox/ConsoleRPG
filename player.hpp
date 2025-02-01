@@ -1,163 +1,17 @@
 ﻿#ifndef PLAYER
 #define PLAYER
 
-class Player;
-
-enum class ItemType {
-	RESOURCE = 0,
-	WEAPON = 1,
-	ARMOR = 2,
-	USABLE = 3
-};
-
-enum class BuffType {
-	DMG = 0,
-	SPD = 1,
-	PROT = 2,
-};
-
-class Item {
-public:
-	std::wstring name = L"";
-	std::wstring symbol = L"@";
-	std::wstring lore = L"";
-	unsigned char colord = YELLOW;
-	ItemType type = ItemType::RESOURCE;
-	bool stackable = true;
-	int count = 0;
-	int minDmg = 0;
-	int maxDmg = 0;
-	int prot = 0;
-	int speed = 1;
-	int reqLevel = 0;
-	int durability = 0;
-	int maxDurability = 0;
-	int cost = 0;
-	int ID = 0;
-	int messageType = 0; // Helper variable for different messages in writeMessage
-
-	Item() {}
-	Item(const wchar_t* name, ItemType type, const wchar_t* symbol = L"@", unsigned char color = YELLOW) : name(name), type(type) {}
-	// 1 - Add to inventory
-	virtual int picked(Player* player) { return 1; }
-	virtual int used(Player* player) { return 0; }
-	virtual void writeMessage() { return; };
-	virtual std::pair<int, std::function<void()>> menuHandle(Player* p, std::vector<MenuItem>& options, std::vector<MenuItem>& texts) {
-		Menu menu(&options, &texts, true);
-		int choice = -2;
-		while (choice == -2) {
-			choice = menu.open();
-			if (choice == 0 && options.size() == 3)
-				return { used(p), [this]() { this->writeMessage(); } };
-			if ((choice == 1 && options.size() == 3) || (choice == 0 && options.size() == 2)) {
-				MenuItem option(L"Are you sure you want to destroy this item?", RED);
-				MenuItem no(L"No", WHITE);
-				MenuItem yes(L"Yes", WHITE);
-				std::vector<MenuItem> options({ no, yes });
-				Menu deleteMenu(&options, option);
-				int confirmation = deleteMenu.open();
-				if (confirmation != 1)
-					choice = -2;
-				else {
-					onRemove(p);
-					return { -1, [this]() { this->writeMessage(); } };
-				}
-			}
-		}
-		return { 0, [this]() { this->writeMessage(); } };
-	}
-
-	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) { return {}; }
-	virtual void onRemove(Player* p) { }
-};
-
-class Recipe {
-public:
-	std::shared_ptr<Item> item = std::shared_ptr<Item>(new Item());
-	std::vector<std::shared_ptr<Item>> items;
-	Recipe(std::vector<std::shared_ptr<Item>> items) : items(items) {};
-	Recipe() {};
-
-	virtual std::shared_ptr<Item> getItem() {
-		return std::shared_ptr<Item>(new Item);
-	}
-
-	virtual std::shared_ptr<Item> craft(std::map<std::wstring, std::shared_ptr<Item>>& inv, int& curID, int& invTaken) {
-		std::vector<MenuItem> texts = std::vector<MenuItem>();
-		std::vector<MenuItem> options = std::vector<MenuItem>();
-		texts.push_back(MenuItem(item->name.c_str(), item->colord));
-		texts.push_back(MenuItem(item->lore.c_str(), WHITE));
-		// Max 10 different ingredients
-		wchar_t s[10][128];
-		int check = 0;
-		int count = 0;
-		for (auto req : items) {
-			wsprintf(s[count], L"(0/%d)", req->count);
-			wsprintf(s[count], L"%s %s", color(req->name.c_str(), req->colord).c_str(), color(s[count], RED).c_str());
-			texts.push_back(MenuItem(2, s[count]));
-			for (auto item : inv) {
-				std::shared_ptr<Item> it = item.second;
-				std::wstring nameReq = it->ID == 0 ? req->name : req->name + std::to_wstring(it->ID);
-				std::wstring nameIt = it->ID == 0 ? it->name : it->name + std::to_wstring(it->ID);
-				if (nameReq == nameIt) {
-					bool enough = it->count >= req->count;
-					wsprintf(s[count], L"(%d/%d)", it->count, req->count);
-					wsprintf(s[count], L"%s %s", color(req->name.c_str(), req->colord).c_str(), color(s[count], enough ? GREEN : RED).c_str());
-					count++;
-					if (enough)
-						check++;
-					break;
-				}
-			}
-		}
-
-		if (check >= items.size()) 
-			options.push_back(MenuItem(L"Craft", GREEN));
-		else
-			texts.push_back(MenuItem(L"Insufficient resources", RED));
-
-		options.push_back(MenuItem(L"Back", WHITE));
-
-		Menu recipesMenu(&options, &texts);
-		int choice = recipesMenu.open();
-
-		if (check >= items.size() && choice == 0) {
-			for (auto req : items)
-				for (auto item : inv) {
-					std::shared_ptr<Item> it = item.second;
-					std::wstring nameReq = it->ID == 0 ? req->name : req->name + std::to_wstring(it->ID);
-					std::wstring nameIt = it->ID == 0 ? it->name : it->name + std::to_wstring(it->ID);
-					if (nameReq == nameIt && it->count >= req->count)
-						inv[nameIt]->count -= req->count;
-				}
-			
-			return getItem();
-		}
-
-		return std::shared_ptr<Item>(new Item());
-	};
-};
-
-class Buff {
-public:
-	BuffType type;
-	int amount;
-	int duration;
-	bool isMultiplier;
-	bool isBuffing = false;
-
-	Buff(BuffType type, float amount, int duration, int isMultiplier = false) : type(type), amount(amount), duration(duration), isMultiplier(isMultiplier) {};
-	void tick() { duration--;  };
-};
+class ItemFactory;
 
 class Player {
 public:
 	std::map<std::wstring, std::shared_ptr<Item>> inv;
-	std::vector<std::shared_ptr<Recipe>> recipes;
+	std::map<std::string, std::shared_ptr<Recipe>> recipes;
 	std::vector<Buff> buffs = {};
 	std::shared_ptr<Item> weapon = nullptr;
 	std::shared_ptr<Item> armor = nullptr;
-	const int maxInvSpace = 37;
+	unsigned int seed = 0;
+	static const int maxInvSpace = 65;
 	int curInvTaken = 0;
 	int health = 100;
 	int maxHealth = 100;
@@ -181,7 +35,65 @@ public:
 	int faith = 0;
 	bool attackedThisTurn = false;
 
-	void addItem(std::shared_ptr<Item> item) {
+	Player() {}
+
+	Player(unsigned int seed): seed(seed) {}
+
+	void save(std::wstring fileName) {
+		std::ofstream playerSave(fileName);
+		for (std::pair<std::wstring, std::shared_ptr<Item>> item : inv)
+			item.second->save(playerSave);
+		playerSave << "EndInv\n";
+		for (std::pair<std::string, std::shared_ptr<Recipe>> recipe : recipes)
+			recipe.second->save(playerSave);
+		playerSave << "EndRecs\n";
+		for (Buff buff : buffs)
+			buff.save(playerSave);
+		playerSave << "EndBuff\n";
+		playerSave << seed << " " << curInvTaken << " " << health << " " << maxHealth << " " << baseDamage << " " << defence << " ";
+		playerSave << baseSpeed << " " << gold << " " << xp << " " << expForNext << " " << level << " " << curItemID << " ";
+		playerSave << curRoomNum << " " << curFloor << " " << curItemID << " " << x << " " << y << " " << faith << "\n";
+	}
+
+	unsigned int load(std::wstring fileName, ItemFactory& factory) {
+		std::ifstream file(fileName);
+		std::string line = "";
+		while (std::getline(file, line) && line != "EndInv") {
+			std::istringstream iss(line);
+			std::string itemType;
+			iss >> itemType;
+			std::shared_ptr<Item> item = factory.createItem(itemType);
+			item->load(iss);
+			addItem(item, true);
+		}
+		while (std::getline(file, line) && line != "EndRecs") {
+			std::istringstream iss(line);
+			std::string recipeType;
+			iss >> recipeType;
+			auto rec = recipes.find(recipeType);
+			if (rec != recipes.end())
+				rec->second->load(iss);
+		}
+		while (std::getline(file, line) && line != "EndBuff") {
+			std::istringstream iss(line);
+			std::string itemType;
+			Buff buff;
+			buff.load(iss);
+		}
+		file >> seed >> curInvTaken >> health >> maxHealth >> baseDamage >> defence >> baseSpeed >> gold >> xp >> expForNext >> level;
+		file >> curItemID >> curRoomNum >> curFloor >> curItemID >> x >> y >> faith;
+
+		return seed;
+	}
+
+	template<class T>
+	void addRecipe(bool unlocked = false) {
+		std::shared_ptr<Recipe> recipe = std::shared_ptr<Recipe>(new T(unlocked));
+		std::string type = recipe->getType();
+		recipes[type] = recipe;
+	};
+
+	void addItem(std::shared_ptr<Item> item, bool isLoading = false) {
 		if (item->stackable) {
 			if (inv.find(item->name) == inv.end()) {
 				inv.insert({ item->name, item });
@@ -191,8 +103,10 @@ public:
 				inv[item->name]->count += item->count;
 		}
 		else {
-			curItemID++;
-			item->ID = curItemID;
+			if (!isLoading) {
+				curItemID++;
+				item->ID = curItemID;
+			}
 			std::wstring s = item->name + std::to_wstring(curItemID);
 			inv.insert({ s, item });
 			curInvTaken++;
@@ -205,7 +119,6 @@ public:
 			realName = name;
 		else
 			realName = name + std::to_wstring(ID);
-
 
 		if (inv.find(realName) != inv.end()) {
 			inv[realName]->count -= count;
@@ -235,7 +148,7 @@ public:
 	}
 
 	// Remove element from inventory menu
-	void removeElement(int idx, wchar_t s[38][128], std::vector<MenuItem>& it, std::vector<std::shared_ptr<Item>>& tIt, Menu& inv) {
+	void removeElement(int idx, wchar_t s[66][128], std::vector<MenuItem>& it, std::vector<std::shared_ptr<Item>>& tIt, Menu& inv) {
 		it.erase(it.begin() + idx);
 		tIt.erase(tIt.begin() + idx);
 
@@ -266,7 +179,7 @@ public:
 	std::function<void()> showInventory() {
 		std::vector<MenuItem> items = std::vector<MenuItem>();
 		std::vector<std::shared_ptr<Item>> trueItems = std::vector<std::shared_ptr<Item>>();
-		wchar_t s[38][128];
+		wchar_t s[66][128];
 		for (auto item : inv) {
 			if (item.second->count > 0) {
 				trueItems.push_back(item.second);
@@ -344,13 +257,15 @@ public:
 
 	// C - show recipes
 	void showCrafting() {
-		const int recipesSize = 50;
+		const int recipesSize = 128;
+		std::vector<std::shared_ptr<Recipe>> recipesVec;
 		std::vector<MenuItem> items = std::vector<MenuItem>();
-		wchar_t s[recipesSize+1][128]; 
+		wchar_t s[recipesSize+1][128];
 
 		for (auto recipe : recipes) {
-			wsprintf(s[items.size()], L"%s", color(recipe->item->name.c_str(), recipe->item->colord).c_str());
+			wsprintf(s[items.size()], L"%s", color(recipe.second->item->name.c_str(), recipe.second->item->colord).c_str());
 			items.push_back(MenuItem(1, s[items.size()]));
+			recipesVec.push_back(recipe.second);
 		}
 
 		wsprintf(s[recipesSize], L"Recipes ");
@@ -364,7 +279,7 @@ public:
 		while (choice != -1 && choice < recipes.size()) {
 			choice = recipesMenu.open(choice);
 			if (choice != -1 && choice < recipes.size()) {
-				std::shared_ptr<Item> res = recipes[choice]->craft(inv, curItemID, curInvTaken);
+				std::shared_ptr<Item> res = recipesVec[choice]->craft(inv, curItemID, curInvTaken);
 				if (res->count != 0)
 					addItem(res);
 			}
@@ -415,6 +330,8 @@ public:
 	}
 	
 	int attack() {
+		if (attackedThisTurn)
+			return 0;
 		if (weapon != nullptr) {
 			weapon->durability--;
 			if (weapon->durability <= 0) {

@@ -148,6 +148,7 @@
   <ItemGroup>
     <ClInclude Include="board.hpp" />
     <ClInclude Include="crafting.hpp" />
+    <ClInclude Include="effective.hpp" />
     <ClInclude Include="enemy.hpp" />
     <ClInclude Include="items.hpp" />
     <ClInclude Include="npc.hpp" />

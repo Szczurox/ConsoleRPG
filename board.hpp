@@ -6,7 +6,8 @@ public:
 	std::vector<std::vector<Tile>> board;
 	std::vector<std::shared_ptr<Enemy>> enemies;
 
-	Board(int width, int height, Player& player) : width(width), height(height), p(player), board(width, std::vector<Tile>(height, Tile(TileType::NOTHING, 0))) {
+	Board(int width, int height, Player& player, bool loading = false) : width(width), height(height), p(player), board(width, std::vector<Tile>(height, Tile(TileType::NOTHING, 0))) {
+		if (loading) return;
 		std::wcout << L"loading...";
 		std::vector<std::vector<std::shared_ptr<Room>>> rooms;
 		std::vector<std::shared_ptr<Room>> curFloor;
@@ -115,6 +116,25 @@ public:
 		}
 	};
 
+	void save(std::wstring fileName) {
+		std::ofstream file(fileName);
+		for (int i = 0; i < board.size(); i++) {
+			for (int j = 0; j < board[0].size(); j++)
+				board[i][j].save(file);
+		}
+	}
+
+	void load(std::wstring fileName, ItemFactory& iFactory, EnemyFactory& eFactory, NPCFactory& nFactory) {
+		std::ifstream file(fileName);
+		for (int i = 0; i < board.size(); i++) {
+			for (int j = 0; j < board[0].size(); j++) {
+				std::shared_ptr<Enemy> enemy = board[i][j].load(file, iFactory, eFactory, nFactory);
+				if (enemy != nullptr)
+					enemies.push_back(enemy);
+			}
+		}
+	}
+
 	// Run before drawing new board for the first time
 	void boardInit() {
 		board[p.x][p.y] = Tile(TileType::PLAY, p.curRoomNum, true);
@@ -126,7 +146,6 @@ public:
 			shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
 			p.addItem(std::shared_ptr<Item>(new Gambeson(10)));
 			p.addItem(std::shared_ptr<Item>(new WoodenSword(10)));
-			pushRecipies(p);
 			board[3][1] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
 			board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
 		}
@@ -209,25 +228,26 @@ public:
 		write(color(L"Defence: %", BLUE).c_str(), p.defence);
 		writeBuff(BuffType::PROT);
 		makeBoxPiece(11, 34);
-		write(color(L"Speed: %\n", PURPLE).c_str(), (p.weapon != nullptr ? p.weapon->speed : 1));
+		write(color(L"Speed: %\n", YELLOW).c_str(), (p.weapon != nullptr ? p.weapon->speed : 1));
 		writeBuff(BuffType::SPD);
 		makeBoxRoof(12, 34);
 	}
 
 	void writeStats3() {
-		makeBoxRoof(14, 34);
-		makeBoxPiece(15, 34);
+		makeBoxRoof(13, 34);
+		makeBoxPiece(14, 34);
 		write(color(L"Floor: %\n", YELLOW).c_str(), p.curFloor);
-		makeBoxPiece(16, 34);
+		makeBoxPiece(15, 34);
 		write(color(L"X: %\n", WHITE).c_str(), p.x);
-		makeBoxPiece(17, 34);
+		makeBoxPiece(16, 34);
 		write(color(L"Y: %\n", WHITE).c_str(), p.y);
-		makeBoxRoof(18, 34);
+		makeBoxRoof(17, 34);
 	}
 
 	// Update board on player action
 	int movePlayer(char ch) {
 		TileType type = TileType::PLAY;
+		p.attackedThisTurn = false;
 		int move = -1;
 		if ((ch == 'W' || ch == 'w')) move = UP;
 		else if ((ch == 'S' || ch == 's')) move = DOWN;
@@ -366,6 +386,7 @@ public:
 				}
 				writeStats();
 				writeStats2();
+				p.attackedThisTurn = true;
 			}
 
 			for (int i = 0; i < 4; i++) {
@@ -494,6 +515,7 @@ public:
 					}
 					writeStats();
 					writeStats2();
+					p.attackedThisTurn = true;
 				}
 				if (move != -1)
 					swapTile(e->x, e->y, move);
