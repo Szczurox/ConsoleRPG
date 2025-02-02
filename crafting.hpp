@@ -1,23 +1,19 @@
 #ifndef CRAFT
 #define CRAFT
 
+#include<memory>
+
+#include"menu.hpp"
+#include"effective.hpp"
+
 // Bone Armor recipe
 class BARecipe : public Recipe {
 public:
-	virtual std::shared_ptr<Item> getItem() {
-		return std::shared_ptr<Item>(new BoneArmor());
-	}
+	virtual std::shared_ptr<Item> getItem();
 
-	BARecipe(bool unl = false) {
-		unlocked = unl;
-		item = std::shared_ptr<Item>(new BoneArmor());
-		items = std::vector<std::shared_ptr<Item>>();
-		items.push_back(std::shared_ptr<Item>(new Bone(30)));
-	};
+	BARecipe(bool unl = false);
 };
 
-void pushRecipies(Player& p) {
-	p.addRecipe<BARecipe>(true);
-}
+void pushRecipies(Player& p);
 
 #endif // !CRAFT

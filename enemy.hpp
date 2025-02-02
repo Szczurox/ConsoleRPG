@@ -1,6 +1,20 @@
 ﻿#ifndef ENEMY
 #define ENEMY
 
+#include<vector>
+#include<memory>
+#include<string>
+#include<map>
+#include<functional>
+#include<array>
+
+#include"const.hpp"
+#include"items.hpp"
+
+class Player;
+
+bool chance(int prob, int omega);
+
 class Enemy {
 public:
 	const wchar_t* name = L"Enemy";
@@ -24,15 +38,13 @@ public:
 	Enemy() {}
 	Enemy(int x, int y, int roomNum) : x(x), y(y), roomNum(roomNum) {}
 
-	int hit(int dmg) {
-		health -= std::max<int>(dmg - defence, dmg / 4);
-		return health;
-	}
+	// Calculate damage enemy taken
+	int hit(int dmg);
 
-	int attack() {
-		return rand() % (maxDamage - minDamage+1) + minDamage;
-	}
+	// Calculate enemy damage
+	int attack();
 
+	// Return randomised loot
 	template<class T, typename ... Args>
 	void randLoot(std::vector<std::shared_ptr<Item>>& vec, int maxAmount, int prob, int omega, Args ... args) {
 		if (!T(args ...).stackable) {
@@ -46,86 +58,15 @@ public:
 		}
 	}
 
-	virtual std::vector<std::shared_ptr<Item>> getLoot() {
-		std::vector<std::shared_ptr<Item>> items;
-		randLoot<GoldPile>(items, 3, 1, 2, minGold, maxGold);
-		return items;
-	}
-
-	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> attacked(Player* p, bool first = false) {
-		// Player dmg, number of player attacks, enemy dmg, number of enemy attacks
-		std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> attacks({ 0, 1, 0, 1, xp }, {});
-		int pSpeed;
-		if (p->weapon == nullptr) pSpeed = p->baseSpeed;
-		else pSpeed = p->weapon->speed + p->baseSpeed;
-		// Player and enemy have same speed
-		if (pSpeed == speed) {
-			// Both attack each other once
-			int playerDmg = p->attack();
-			int enemyDmg = attack();
-			hit(playerDmg);
-			attacks.first[0] = playerDmg;
-			if (health > 0 || first) {
-				p->hit(attack());
-				attacks.first[2] = enemyDmg;
-			}
-		}
-		// Player is faster
-		else if (pSpeed > speed) {
-			attacks.first[1] = 0;
-			// Player attacks playerSpeed - enemySpeed amount of times
-			for (int i = speed; i <= pSpeed; i++) {
-				int playerDmg = p->attack();
-				hit(playerDmg);
-				attacks.first[0] += playerDmg;
-				attacks.first[1]++;
-			}
-			// Enemy attacks once if alive
-			int enemyDmg = attack();
-			if (health > 0 || first) {
-				p->hit(attack());
-				attacks.first[2] += enemyDmg;
-			}
-		}
-		// Enemy is faster
-		else {
-			attacks.first[3] = 0;
-			// Enemy attacks enemySpeed - playerSpeed amount of times
-			for (int i = pSpeed; i <= speed; i++) {
-				int enemyDmg = attack();
-				p->hit(attack());
-				attacks.first[2] += enemyDmg;
-				attacks.first[3]++;
-			}
-			// Player attacks once if alive
-			int playerDmg = p->attack();
-			hit(playerDmg);
-			attacks.first[0] += playerDmg;
-		}
-
-		if (health <= 0) {
-			p->xp += xp;
-			p->checkLevelUp();
-			attacks.second = getLoot();
-		}
-
-		return attacks;
-	}
+	virtual std::vector<std::shared_ptr<Item>> getLoot();
+	// Handle fight
+	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> attacked(Player* p, bool first = false);
 	// Class name of the enemy
-	virtual std::string getType() const {
-		std::string typeName = typeid(*this).name();
-		if (typeName.rfind("class ", 0) == 0)
-			typeName = typeName.substr(6);
-		return typeName;
-	}
+	virtual std::string getType() const;
 
-	virtual void save(std::ostream& os) {
-		os << getType() << " " << x << " " << y << " " << roomNum << "\n";
-	}
+	virtual void save(std::ostream& os);
 
-	virtual void load(std::istringstream& in) {
-		in >> x >> y >> roomNum;
-	}
+	virtual void load(std::istringstream& in);
 };
 
 
@@ -133,11 +74,8 @@ class EnemyFactory {
 public:
 	std::map<std::string, std::function<std::shared_ptr<Enemy>()>> enemyMap;
 
-	EnemyFactory() {};
-
-	std::shared_ptr<Enemy> createEnemy(const std::string& type) {
-		return enemyMap[type]();
-	}
+	EnemyFactory();
+	std::shared_ptr<Enemy> createEnemy(const std::string& type);
 
 	template <class T>
 	void registerEnemy() {
@@ -149,7 +87,6 @@ public:
 		};
 	}
 };
-
 
 class Skeleton : public Enemy {
 public:
@@ -168,12 +105,7 @@ public:
 		maxGold = 100;
 	}
 
-	virtual std::vector<std::shared_ptr<Item>> getLoot() {
-		std::vector<std::shared_ptr<Item>> items;
-		randLoot<GoldPile>(items, 3, 1, 2, minGold, maxGold);
-		randLoot<Bone>(items, 5, 1, 3);
-		return items;
-	}
+	virtual std::vector<std::shared_ptr<Item>> getLoot();
 };
 
 class Zombie : public Enemy {
@@ -194,12 +126,7 @@ public:
 		maxGold = 150;
 	}
 
-	virtual std::vector<std::shared_ptr<Item>> getLoot() {
-		std::vector<std::shared_ptr<Item>> items;
-		randLoot<GoldPile>(items, 4, 1, 2, minGold, maxGold);
-		randLoot<ZombieMeat>(items, 5, 1, 3);
-		return items;
-	}
+	virtual std::vector<std::shared_ptr<Item>> getLoot();
 };
 
 class Assassin : public Enemy {
@@ -220,12 +147,7 @@ public:
 		maxGold = 256;
 	}
 
-	virtual std::vector<std::shared_ptr<Item>> getLoot() {
-		std::vector<std::shared_ptr<Item>> items;
-		randLoot<GoldPile>(items, 4, 1, 2, minGold, maxGold);
-		randLoot<IronShortsword>(items, 1, 1, 75, randMinMax(20, 200));
-		return items;
-	}
+	virtual std::vector<std::shared_ptr<Item>> getLoot();
 };
 
 #endif // !ENEMY

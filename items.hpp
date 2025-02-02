@@ -1,204 +1,132 @@
 ﻿#ifndef ITEMS
 #define ITEMS
 
-class Weapon : public Item {
+#include<string>
+#include<vector>
+#include<functional>
+#include<utility>
+#include<map>
+#include<memory>
+
+#include"const.hpp"
+#include"menu.hpp"
+
+class MenuItem;
+class Player;
+class Menu;
+class Item;
+
+enum class ItemType {
+	RESOURCE = 0,
+	WEAPON = 1,
+	ARMOR = 2,
+	USABLE = 3
+};
+
+class ItemFactory {
 public:
-	Weapon() {
-		type = ItemType::WEAPON;
-		count = 1;
-		stackable = false;
-	}
-	virtual int used(Player* player) {
-		if (player->weapon.get() != this) {
-			player->minDamage = player->baseDamage + minDmg;
-			player->maxDamage = player->baseDamage + maxDmg;
-			return 1;
-		}
-		else {
-			player->minDamage = player->baseDamage;
-			player->maxDamage = player->baseDamage; 
-			return 3;
-		}
-	}
-	virtual void onRemove(Player* p) {
-		if (p->weapon.get() == this)
-			p->weapon = nullptr;
-		p->removeItem(name, 1, ID);
-	}
-
-	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) {
-		MenuItem nameI(name.c_str(), colord);
-		MenuItem loreI(lore.c_str(), WHITE);
-		wchar_t s[256];
-		wsprintf(s, L"Deals %d-%d damage and has %d speed", minDmg, maxDmg, speed);
-		MenuItem damage(s, YELLOW);
-		char durColor = RED;
-		if (durability * 100 / maxDurability > 30)
-			durColor = YELLOW;
-		if (durability * 100 / maxDurability > 60)
-			durColor = GREEN;
-		wchar_t d[256];
-		wsprintf(d, L"%d/%d", durability, maxDurability);
-		wsprintf(d, L"%s %s", color(L"Durability:", BRIGHT_BLUE).c_str(), color(d, durColor).c_str());
-		MenuItem dur(2, d);
-		std::vector<MenuItem> texts({ nameI, loreI, damage, dur });
-		if (p->level < reqLevel) {
-			wchar_t e[256];
-			wsprintf(e, L"Required Level: %d", reqLevel);
-			texts.push_back(MenuItem(e, RED));
-		}
-
-		std::vector<MenuItem> options;
-		if (p->level >= reqLevel) {
-			MenuItem equip;
-			if (p->weapon.get() != this) 
-				equip = MenuItem(L"Equip", BRIGHT_GREEN);
-			else 
-				equip = MenuItem(L"Unequip", BRIGHT_GREEN);
-			options.push_back(equip);
-		}
-		options.push_back(MenuItem(L"Destroy", RED));
-		options.push_back(MenuItem(L"Back", WHITE));
-
-		return menuHandle(p, options, texts);
+	std::map<std::string, std::function<std::shared_ptr<Item>()>> itemMap;
+	ItemFactory() {};
+	std::shared_ptr<Item> createItem(const std::string& type);
+	template <class T>
+	void registerItem() {
+		std::string type = typeid(T).name();
+		if (type.rfind("class ", 0) == 0)
+			type = type.substr(6);
+		itemMap[type] = []() -> std::shared_ptr<Item> {
+			return std::make_shared<T>();
+		};
 	}
 };
 
-class Armor : public Item {
+class Item {
 public:
-	Armor() {
-		type = ItemType::ARMOR;
-		count = 1;
-		stackable = false;
-		maxDurability = durability;
-	}
-	virtual int used(Player* player) {
-		if (player->armor.get() != this) {
-			player->defence = prot;
-			return 2;
-		}
-		else {
-			player->defence = 0;
-			return 4;
-		}
-	}
-	virtual void onRemove(Player* p) {
-		if (p->armor.get() == this)
-			p->armor = nullptr;
-		p->removeItem(name, 1, ID);
-	}
-	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) {
-		MenuItem nameI(name.c_str(), colord);
-		MenuItem loreI(lore.c_str(), WHITE);
-		wchar_t s[256];
-		wsprintf(s, L"Gives you %d defence", prot);
-		MenuItem prot(s, YELLOW);
-		char durColor = RED;
-		if (durability * 100 / maxDurability >= 30)
-			durColor = YELLOW;
-		if (durability * 100 / maxDurability >= 70)
-			durColor = GREEN;
-		wchar_t d[256];
-		wsprintf(d, L"%d/%d", durability, maxDurability);
-		wsprintf(d, L"%s %s", color(L"Durability:", BRIGHT_BLUE).c_str(), color(d, durColor).c_str());
-		MenuItem dur(2, d);
-		std::vector<MenuItem> texts({ nameI, loreI, prot, dur });
-		if (p->level < reqLevel) {
-			wchar_t e[256];
-			wsprintf(e, L"Required Level: %d", reqLevel);
-			texts.push_back(MenuItem(e, RED));
-		}
+	std::wstring name = L"";
+	std::wstring symbol = L"@";
+	std::wstring lore = L"";
+	unsigned char colord = YELLOW;
+	ItemType type = ItemType::RESOURCE;
+	bool stackable = true;
+	int count = 1;
+	int minDmg = 0;
+	int maxDmg = 0;
+	int prot = 0;
+	int speed = 1;
+	int reqLevel = 0;
+	int durability = 0;
+	int maxDurability = 0;
+	int cost = 0;
+	int ID = 0;
+	int messageType = 0; // Helper variable for different messages in writeMessage
 
-		std::vector<MenuItem> options;
-		if (p->level >= reqLevel) {
-			MenuItem equip;
-			if (p->armor.get() != this)
-				equip = MenuItem(L"Equip", BRIGHT_GREEN);
-			else
-				equip = MenuItem(L"Unequip", BRIGHT_GREEN);
-			options.push_back(equip);
-		}
-		options.push_back(MenuItem(L"Destroy", RED));
-		options.push_back(MenuItem(L"Back", WHITE));
-
-		return menuHandle(p, options, texts);
-	}
-};
-
-class Usable : public Item {
-public:
-	Usable() {
-		type = ItemType::USABLE;
-		count = 1;
-		stackable = true;
-	}
-	virtual int used(Player* player) {
-		return 5;
-	}
-	virtual void onRemove(Player* p) {
-		p->removeItem(name, count);
-	}
-	virtual void writeMessage() { write(L"used!"); };
-	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) {
-		MenuItem nameI(name.c_str(), colord);
-		MenuItem loreI(lore.c_str(), WHITE);
-		wchar_t d[256];
-		wsprintf(d, L"Amount: %d", count);
-		MenuItem coun(d, BRIGHT_BLUE);
-		std::vector<MenuItem> texts({ nameI, loreI, coun });
-
-		MenuItem use(L"Use", BRIGHT_GREEN);
-		MenuItem remove(L"Destroy", RED);
-		MenuItem back(L"Back", WHITE);
-		std::vector<MenuItem> options({ use, remove, back });
-
-		return menuHandle(p, options, texts);
-	}
-};
-
-class Resource : public Item {
-public:
-	Resource() {
-		type = ItemType::RESOURCE;
-		count = 1;
-		stackable = true;
+	Item() {}
+	Item(const wchar_t* name, ItemType type) {};
+	virtual int picked(Player* player) {
+		return 1;
 	}
 	virtual int used(Player* player) {
 		return 1;
 	}
-	virtual void onRemove(Player* p) {
-		p->removeItem(name, count);
-	}
+	virtual void writeMessage() {};
+	virtual std::pair<int, std::function<void()>> menuHandle(Player* p, std::vector<std::shared_ptr<MenuItem>>& options, std::vector<std::shared_ptr<MenuItem>>& texts);
 	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) {
-		MenuItem nameI(name.c_str(), colord);
-		MenuItem loreI(lore.c_str(), WHITE);
-		wchar_t d[256];
-		wsprintf(d, L"Amount: %d", count);
-		MenuItem coun(d, BRIGHT_BLUE);
-		std::vector<MenuItem> texts({ nameI, loreI, coun });
-
-		MenuItem remove(L"Destroy", RED);
-		MenuItem back(L"Back", WHITE);
-		std::vector<MenuItem> options({ remove, back });
-
-		return menuHandle(p, options, texts);
+		return { 0, std::function<void()>() };
 	}
+	virtual void onRemove(Player* p) {};
+	virtual std::string getType() const;
+	virtual void save(std::ostream& os);
+	virtual void load(std::istringstream& in);
 };
 
-// Tile items
+// Weapon class
+class Weapon : public Item {
+public:
+	Weapon() {
+		stackable = false;
+	};
+    int used(Player* player);
+    void onRemove(Player* p);
+	void writeMessage() {};
+    std::pair<int, std::function<void()>> itemMenu(Player* p);
+};
+
+// Armor class
+class Armor : public Item {
+public:
+	Armor() {
+		stackable = false;
+	};
+    int used(Player* player);
+    void onRemove(Player* p);
+	void writeMessage() {};
+    std::pair<int, std::function<void()>> itemMenu(Player* p);
+};
+
+// Usable class
+class Usable : public Item {
+public:
+	Usable() {};
+    int used(Player* player);
+    void onRemove(Player* p);
+    virtual void writeMessage();
+    std::pair<int, std::function<void()>> itemMenu(Player* p);
+};
+
+// Resource class
+class Resource : public Item {
+public:
+	Resource() {};
+	int used(Player* player);
+	void onRemove(Player* p);
+	std::pair<int, std::function<void()>> itemMenu(Player* p);
+};
+
+// Specific item classes
 class GoldPile : public Item {
 public:
-	GoldPile(int minGold = 1, int maxGold = 1) {
-		type = ItemType::RESOURCE;
-		name = L"gold";
-		count = randMinMax(minGold, maxGold);
-		stackable = false;
-	}
+	GoldPile(int minGold = 1, int maxGold = 1);
 
-	int picked(Player* player) {
-		player->gold += count;
-		return 0;
-	}
+    int picked(Player* player);
 };
 
 // Weapons
@@ -270,16 +198,9 @@ public:
 // Consumables
 class HealthPotion : public Usable {
 public:
-	virtual int used(Player* p) {
-		p->health += 100;
-		if (p->health > p->maxHealth) p->health = p->maxHealth;
-		p->removeItem(name, 1);
-		return 5;
-	}
+	virtual int used(Player* p);
 
-	virtual void writeMessage() {
-		write(L"You drank %.\nHealed for 100HP!", color(name.c_str(), colord).c_str());
-	};
+	virtual void writeMessage();
 
 	HealthPotion(int cnt = 1) {
 		name = L"Health Potion";
@@ -294,23 +215,9 @@ public:
 
 class ZombieMeat : public Usable {
 public:
-	virtual int used(Player* p) {
-		int random = randMinMax(0, 50);
-		int buff = randMinMax(1, 3);
-		if (random >= 80) {
-			p->health += random;
-			if (p->health > p->maxHealth) p->health = p->maxHealth;
-		}
-		else if (random < 60) 
-			p->health -= random;
-		p->giveBuff(BuffType::DMG, buff, 50, false);
-		p->removeItem(name, 1);
-		return 5;
-	}
+	virtual int used(Player* p);
 
-	virtual void writeMessage() {
-		write(L"You ate %.\nYou feel strange.", color(name.c_str(), colord).c_str());
-	};
+	virtual void writeMessage();
 
 	ZombieMeat(int cnt = 1) {
 		name = L"Zombie Meat";
@@ -325,23 +232,9 @@ public:
 
 class BloodOath : public Usable {
 public:
-	virtual int used(Player* p) {
-		int healthChange = randMinMax(5, 20);
-		p->health -= healthChange;
-		p->maxHealth -= healthChange;
-		p->baseDamage += randMinMax(1, 3);
-		if (p->faith < 1) {
-			p->health -= p->health / 2;
-			p->giveBuff(BuffType::DMG, 6, 67);
-		}
-		p->faith -= 1;
-		p->removeItem(name, 1);
-		return 5;
-	}
+	virtual int used(Player* p);
 
-	virtual void writeMessage() {
-		write(color(L"There is no going back...", colord).c_str());
-	};
+	virtual void writeMessage();
 
 	BloodOath(int cnt = 1) {
 		name = L"Blood Oath";
@@ -356,31 +249,9 @@ public:
 
 class SacramentalBread : public Usable {
 public:
-	virtual int used(Player* p) {
-		if (p->faith < -5) {
-			p->health -= p->health / 2;
-			p->faith++;
-		}
-		else {
-			p->maxHealth += 10 + p->faith;
-			p->health = p->maxHealth;
-		}
-		if (p->faith > -1) 
-			p->giveBuff(BuffType::PROT, 3, 334);
-		else
-			messageType = 1;
-		p->removeItem(name, 1);
-		return 5;
-	}
+	virtual int used(Player* p);
 
-	virtual void writeMessage() {
-		if(messageType == 0)
-			write(color(L"You feel refreshed and protected.", colord).c_str());
-		else if(messageType == 2)
-			write(L"You ate %.\n%", color(name.c_str(), colord).c_str(), color(L"It hurts...", RED).c_str());
-		else
-			write(L"%%", color(L"You feel refreshed... ", colord).c_str(), color(L"but not protected.", RED).c_str());
-	};
+	virtual void writeMessage();
 
 	SacramentalBread(int cnt = 1) {
 		name = L"Sacramental Bread";
@@ -405,5 +276,6 @@ public:
 		count = cnt;
 	}
 };
+
 
 #endif // !ITEMS
