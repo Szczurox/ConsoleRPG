@@ -295,8 +295,8 @@ int Board::movePlayer(char ch) {
 	else if ((ch == 'T' || ch == 't')) move = -2;
 	else if (ch == 72) move = UP;
 	else if (ch == 80) move = DOWN;
-	else if (ch == 77) move = LEFT;
-	else if (ch == 75) move = RIGHT;
+	else if (ch == 75) move = LEFT;
+	else if (ch == 77) move = RIGHT;
 	else move = -1;
 	// Press T to wait a turn
 	if (move != -2 && move != -1) {
@@ -406,11 +406,9 @@ int Board::movePlayer(char ch) {
 			else {
 				write(L" in % hit(s) killing the enemy\nGained ", result[1]);
 				write(color(L"% experience", GREEN).c_str(), result[4]);
-				changeTile(tileX, tileY);
 			}
 			if (effect.first != L"") {
-				write(L"\n");
-				write(color(L"%", enemy->nameColor).c_str(), enemy->name);
+				write(color(L"\n%", enemy->nameColor).c_str(), enemy->name);
 				write(L" inflicted ");
 				write(color(L"%", effect.second).c_str(), effect.first);
 				write(L" on you!");
@@ -555,7 +553,7 @@ void Board::moveEnemies(std::shared_ptr<Enemy> fought) {
 					write(L" left");
 				}
 				if (effect.first != L"") {
-					write(L"\n");
+					setCursor(0, height);
 					write(color(L"%", e->nameColor).c_str(), e->name);
 					write(L" inflicted ");
 					write(color(L"%", effect.second).c_str(), effect.first);
