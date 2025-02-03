@@ -4,6 +4,7 @@
 #include<vector>
 #include<fstream>
 #include<map>
+#include<memory>
 #include<functional>
 
 #include"const.hpp"

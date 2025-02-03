@@ -2,6 +2,7 @@
 #define MENU
 
 #include<string>
+#include<memory>
 
 #include"const.hpp"
 

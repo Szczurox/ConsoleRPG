@@ -1,9 +1,11 @@
 #include<filesystem>
 #include<iostream>
 #include<sstream>
+#include<string>
 #include<cwctype>
 #include<regex>
 #include<atomic>
+#include<math.h>
 #include<mutex>
 #include<xaudio2.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -105,8 +107,8 @@ void setWindow(int width, int height) {
 std::vector<std::wstring> getFilesWithPrefix(const std::wstring& dirPath, const std::wstring& prefix) {
 	std::vector<std::wstring> files;
 #if defined(_WIN32) || defined(_WIN64)
-	WIN32_FIND_DATA findFileData;
-	HANDLE hFind = FindFirstFile((dirPath + L"\\*").c_str(), &findFileData);
+	WIN32_FIND_DATAW findFileData;
+	HANDLE hFind = FindFirstFileW((dirPath + L"\\*").c_str(), &findFileData);
 
 	if (hFind == INVALID_HANDLE_VALUE) {
 		std::wcerr << L"Invalid directory path!" << std::endl;
@@ -116,12 +118,12 @@ std::vector<std::wstring> getFilesWithPrefix(const std::wstring& dirPath, const 
 		if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			continue;
 
-		std::wstring fileName = findFileData.cFileName;
+		std::wstring fileName(findFileData.cFileName);
 
 		if (fileName.find(prefix) == 0)
 			files.push_back(fileName);
 
-	} while (FindNextFile(hFind, &findFileData) != 0);
+	} while (FindNextFileW(hFind, &findFileData) != 0);
 
 	FindClose(hFind);
 #else
@@ -163,7 +165,7 @@ bool createDirectory(const std::wstring& path) {
 	std::wstring dirPath = path;  // Combine base path and directory name
 
 #if defined(_WIN32) || defined(_WIN64)
-	return CreateDirectory(dirPath.c_str(), NULL) != 0;  // Windows
+	return CreateDirectoryW(dirPath.c_str(), NULL) != 0;  // Windows
 #else
 	return mkdir(dirPath.c_str(), 0777) == 0;  // Linux/macOS
 #endif
@@ -173,12 +175,11 @@ std::vector<std::wstring> getDirectories(const std::wstring& dirPath) {
 	std::vector<std::wstring> directories;
 
 #if defined(_WIN32) || defined(_WIN64)
-	WIN32_FIND_DATA findFileData;
-	HANDLE hFind = FindFirstFile((dirPath + L"\\*").c_str(), &findFileData);
+	WIN32_FIND_DATAW findFileData;
+	HANDLE hFind = FindFirstFileW((dirPath + L"\\*").c_str(), &findFileData);
 
-	if (hFind == INVALID_HANDLE_VALUE) {
+	if (hFind == INVALID_HANDLE_VALUE) 
 		return directories;  // Invalid directory path
-	}
 
 	do {
 		if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
@@ -187,7 +188,7 @@ std::vector<std::wstring> getDirectories(const std::wstring& dirPath) {
 				directories.push_back(dirName);
 			}
 		}
-	} while (FindNextFile(hFind, &findFileData) != 0);
+	} while (FindNextFileW(hFind, &findFileData) != 0);
 
 	FindClose(hFind);
 #else

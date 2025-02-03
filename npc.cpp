@@ -74,4 +74,6 @@ std::shared_ptr<SoldInfo> Shop::interacted(Player* p) {
 		}
 		return std::shared_ptr<SoldInfo>(new SoldInfo(name, 0, 0, -1));
 	}
+
+    return std::shared_ptr<SoldInfo>(new SoldInfo(name, 0, 0, -1));
 }

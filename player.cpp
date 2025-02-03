@@ -14,7 +14,7 @@
 #include"menu.hpp"
 
 void Player::save(std::wstring fileName) {
-	std::ofstream playerSave(fileName);
+	std::ofstream playerSave(fileName.c_str());
 	for (std::pair<std::wstring, std::shared_ptr<Item>> item : inv)
 		item.second->save(playerSave);
 	playerSave << "EndInv\n";
@@ -30,7 +30,7 @@ void Player::save(std::wstring fileName) {
 }
 
 unsigned int Player::load(std::wstring fileName, ItemFactory& factory) {
-	std::ifstream file(fileName);
+	std::ifstream file(fileName.c_str());
 	std::string line = "";
 	while (std::getline(file, line) && line != "EndInv") {
 		std::istringstream iss(line);

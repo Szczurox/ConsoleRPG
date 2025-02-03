@@ -34,6 +34,6 @@ std::pair<std::wstring, unsigned char> Buff::getType() {
     case BuffType::SPD:
         return isNegative ? std::make_pair<std::wstring, unsigned char>(L"Slowness", GREY) : std::make_pair<std::wstring, unsigned char>(L"Speed", YELLOW);
     default:
-        break;
+        return {L"", 0};
     }
 }

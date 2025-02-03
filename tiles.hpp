@@ -5,6 +5,7 @@
 #include<array>
 #include<utility>
 #include<tuple>
+#include<memory>
 
 class NPC;
 class Player;

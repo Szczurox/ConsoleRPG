@@ -143,7 +143,7 @@ Board::Board(int width, int height, Player& player, bool loading, unsigned int s
 };
 
 void Board::save(std::wstring fileName) {
-	std::ofstream file(fileName);
+	std::ofstream file(fileName.c_str());
 	file << seed << "\n";
 	for (int i = 0; i < board.size(); i++) {
 		for (int j = 0; j < board[0].size(); j++)
@@ -152,7 +152,7 @@ void Board::save(std::wstring fileName) {
 }
 
 void Board::load(std::wstring fileName, ItemFactory& iFactory, EnemyFactory& eFactory, NPCFactory& nFactory) {
-	std::ifstream file(fileName);
+	std::ifstream file(fileName.c_str());
 	file >> seed;
 	for (int i = 0; i < board.size(); i++) {
 		for (int j = 0; j < board[0].size(); j++) {
@@ -292,27 +292,14 @@ int Board::movePlayer(char ch) {
 	else if ((ch == 'S' || ch == 's')) move = DOWN;
 	else if ((ch == 'A' || ch == 'a')) move = LEFT;
 	else if ((ch == 'D' || ch == 'd')) move = RIGHT;
-	else if ((ch == 'T' || ch == 't'))
-		move = -2;
-	else
-		switch (ch) {
-		case 72:
-			move = UP;
-			break;
-		case 80:
-			move = DOWN;
-			break;
-		case 77:
-			move = RIGHT;
-			break;
-		case 75:
-			move = LEFT;
-			break;
-		default:
-			return 0;
-		}
+	else if ((ch == 'T' || ch == 't')) move = -2;
+	else if (ch == 72) move = UP;
+	else if (ch == 80) move = DOWN;
+	else if (ch == 77) move = LEFT;
+	else if (ch == 75) move = RIGHT;
+	else move = -1;
 	// Press T to wait a turn
-	if (move != -2) {
+	if (move != -2 && move != -1) {
 		int tileX = p.x + dx[move];
 		int tileY = p.y + dy[move];
 		if (move != -2)
@@ -419,6 +406,7 @@ int Board::movePlayer(char ch) {
 			else {
 				write(L" in % hit(s) killing the enemy\nGained ", result[1]);
 				write(color(L"% experience", GREEN).c_str(), result[4]);
+				changeTile(tileX, tileY);
 			}
 			if (effect.first != L"") {
 				write(L"\n");
@@ -427,16 +415,18 @@ int Board::movePlayer(char ch) {
 				write(color(L"%", effect.second).c_str(), effect.first);
 				write(L" on you!");
 			}
+
 			writeStats();
 			writeStats2();
 
-			if (enemy->health < 0) {
+			if (enemy->health <= 0) {
 				changeTile(tileX, tileY);
 				auto it = std::find(enemies.begin(), enemies.end(), enemy);
 				if (it != enemies.end()) { enemies.erase(it); }
 				board[tileX][tileY].enemy = nullptr;
 				placeItems(std::get<1>(results), tileX, tileY);
 			}
+
 			p.attackedThisTurn = true;
 		}
 
@@ -451,19 +441,16 @@ int Board::movePlayer(char ch) {
 			}
 		}
 
-
 		changeTile(p.x, p.y, Tile(TileType::PLAY, p.curRoomNum));
 
 		p.checkBuffs();
 		writeStats();
 		writeStats2();
 
-		if (move != -1)
-			moveEnemies(enemy);
+		moveEnemies(enemy);
 	}
-	else {
+	else if(move != -1)
 		moveEnemies();
-	}
 
 	moveDone = true;
 
@@ -583,7 +570,6 @@ void Board::moveEnemies(std::shared_ptr<Enemy> fought) {
 				}
 				writeStats();
 				writeStats2();
-				p.attackedThisTurn = true;
 			}
 			if (move != -1)
 				swapTile(e->x, e->y, move);
