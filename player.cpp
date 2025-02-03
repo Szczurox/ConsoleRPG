@@ -1,6 +1,7 @@
 ﻿#include<functional>
 #include<filesystem>
 #include<algorithm>
+#include<windows.h>
 #include<iostream>
 #include<fstream>
 #include<sstream>
@@ -24,7 +25,7 @@ void Player::save(std::wstring fileName) {
 		buff->save(playerSave);
 	playerSave << "EndBuff\n";
 	playerSave << seed << " " << curInvTaken << " " << health << " " << maxHealth << " " << baseDamage << " " << defence << " ";
-	playerSave << baseSpeed << " " << gold << " " << xp << " " << expForNext << " " << level << " " << curItemID << " ";
+	playerSave << baseSpeed << " " << gold << " " << xp << " " << expForNext << " " << level << " ";
 	playerSave << curRoomNum << " " << curFloor << " " << curItemID << " " << x << " " << y << " " << faith << "\n";
 }
 
@@ -52,9 +53,10 @@ unsigned int Player::load(std::wstring fileName, ItemFactory& factory) {
 		std::string itemType;
 		std::shared_ptr<Buff> buff = std::shared_ptr<Buff>(new Buff());
 		buff->load(iss);
+		buffs.push_back(buff);
 	}
 	file >> seed >> curInvTaken >> health >> maxHealth >> baseDamage >> defence >> baseSpeed >> gold >> xp >> expForNext >> level;
-	file >> curItemID >> curRoomNum >> curFloor >> curItemID >> x >> y >> faith;
+	file >> curRoomNum >> curFloor >> curItemID >> x >> y >> faith;
 
 	return seed;
 }
@@ -227,7 +229,7 @@ void Player::showCrafting() {
 		recipesVec.push_back(recipe.second);
 	}
 
-	std::shared_ptr<MenuItem> title= createMenuItem(L"Recipes ", BRIGHT_CYAN);
+	std::shared_ptr<MenuItem> title = createMenuItem(L" Recipes", BRIGHT_CYAN);
 
 	items.push_back(createMenuItem(L"Back", WHITE));
 
@@ -302,20 +304,18 @@ int Player::attack() {
 	return randMinMax(minDamage, maxDamage);
 }
 
-void Player::giveBuff(BuffType type, float amount, int duration, int isMultiplier) {
-	buffs.push_back(std::shared_ptr<Buff>(new Buff(type, amount, duration, isMultiplier)));
+std::pair<std::wstring, unsigned char> Player::giveBuff(BuffType type, float amount, int duration, bool isNegative) {
+	std::shared_ptr<Buff> buff = std::shared_ptr<Buff>(new Buff(type, amount, duration, isNegative));
+	buffs.push_back(buff);
+	return buff->getType();
 }
 
 void Player::buffStat(bool isBuff, std::vector<int*> stats, std::shared_ptr<Buff> buff) {
 	for (int* stat : stats) {
-		if (buff->isMultiplier) {
-			if (isBuff) *stat *= buff->amount;
-			else *stat /= buff->amount;
-		}
-		else {
-			if (isBuff) *stat += buff->amount;
-			else *stat -= buff->amount;
-		}
+		if (*stat <= 0 && buff->isNegative)
+			continue;
+		if ((isBuff && !buff->isNegative) || (!isBuff && buff->isNegative)) *stat += buff->amount;
+		else *stat -= buff->amount;
 	}
 	buff->isBuffing = true;
 }
@@ -353,6 +353,6 @@ void Player::checkBuffs() {
 			return;
 		}
 
-		buff->tick();
+		buff->tick(this);
 	}
 }

@@ -20,9 +20,9 @@ std::vector<std::shared_ptr<Item>> Enemy::getLoot() {
     return items;
 }
 
-std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> Enemy::attacked(Player* p, bool first) {
+std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> Enemy::attacked(Player* p, bool first) {
     // Player dmg, number of player attacks, enemy dmg, number of enemy attacks
-	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> attacks({ 0, 1, 0, 1, xp }, {});
+	std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> attacks({ 0, 1, 0, 1, xp }, {}, {L"", 0});
 	int pSpeed;
 	if (p->weapon == nullptr) pSpeed = p->baseSpeed;
 	else pSpeed = p->weapon->speed + p->baseSpeed;
@@ -32,49 +32,52 @@ std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> Enemy::attacke
 		int playerDmg = p->attack();
 		int enemyDmg = attack();
 		hit(playerDmg);
-		attacks.first[0] = playerDmg;
+		std::get<0>(attacks)[0] = playerDmg;
 		if (health > 0 || first) {
+			std::get<2>(attacks) = special(p);
 			p->hit(attack());
-			attacks.first[2] = enemyDmg;
+			std::get<0>(attacks)[2] = enemyDmg;
 		}
 	}
 	// Player is faster
 	else if (pSpeed > speed) {
-		attacks.first[1] = 0;
+		std::get<0>(attacks)[1] = 0;
 		// Player attacks playerSpeed - enemySpeed amount of times
 		for (int i = speed; i <= pSpeed; i++) {
 			int playerDmg = p->attack();
 			hit(playerDmg);
-			attacks.first[0] += playerDmg;
-			attacks.first[1]++;
+			std::get<0>(attacks)[0] += playerDmg;
+			std::get<0>(attacks)[1]++;
 		}
 		// Enemy attacks once if alive
 		int enemyDmg = attack();
 		if (health > 0 || first) {
+			std::get<2>(attacks) = special(p);
 			p->hit(attack());
-			attacks.first[2] += enemyDmg;
+			std::get<0>(attacks)[2] += enemyDmg;
 		}
 	}
 	// Enemy is faster
 	else {
-		attacks.first[3] = 0;
+		std::get<0>(attacks)[3] = 0;
 		// Enemy attacks enemySpeed - playerSpeed amount of times
 		for (int i = pSpeed; i <= speed; i++) {
 			int enemyDmg = attack();
+			std::get<2>(attacks) = special(p);
 			p->hit(attack());
-			attacks.first[2] += enemyDmg;
-			attacks.first[3]++;
+			std::get<0>(attacks)[2] += enemyDmg;
+			std::get<0>(attacks)[3]++;
 		}
 		// Player attacks once if alive
 		int playerDmg = p->attack();
 		hit(playerDmg);
-		attacks.first[0] += playerDmg;
+		std::get<0>(attacks)[0] += playerDmg;
 	}
 
 	if (health <= 0) {
 		p->xp += xp;
 		p->checkLevelUp();
-		attacks.second = getLoot();
+		std::get<1>(attacks) = getLoot();
 	}
 
 	return attacks;
@@ -115,9 +118,33 @@ std::vector<std::shared_ptr<Item>> Zombie::getLoot() {
     return items;
 }
 
+std::pair<std::wstring, unsigned char> Zombie::special(Player* p) {
+	if(chance(1, 4))
+		return p->giveBuff(BuffType::DMG, 1, 3, true);
+	return {L"", 0};
+}
+
 std::vector<std::shared_ptr<Item>> Assassin::getLoot() {
     std::vector<std::shared_ptr<Item>> items;
     randLoot<GoldPile>(items, 4, 1, 2, minGold, maxGold);
-    randLoot<IronShortsword>(items, 1, 1, 75, randMinMax(20, 200));
+    randLoot<IronShortsword>(items, 1, 1, 75, randMinMax(20, 190));
     return items;
+}
+
+std::pair<std::wstring, unsigned char> Assassin::special(Player* p) {
+	if (chance(1, 3))
+		return p->giveBuff(BuffType::PROT, 1, 3, true);
+	return { L"", 0 };
+}
+
+std::vector<std::shared_ptr<Item>> Snake::getLoot() {
+	std::vector<std::shared_ptr<Item>> items;
+	randLoot<WoodenSword>(items, 1, 1, 50, randMinMax(1, 100));
+	return items;
+}
+
+std::pair<std::wstring, unsigned char> Snake::special(Player* p) {
+	if (chance(1, 3))
+		return p->giveBuff(BuffType::REG, 1, 6, true);
+	return { L"", 0 };
 }

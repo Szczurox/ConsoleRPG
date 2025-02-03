@@ -5,7 +5,6 @@
 #include<string>
 #include<vector>
 #include<memory>
-#include<map>
 
 #include"const.hpp"
 
@@ -13,23 +12,10 @@ class Player;
 class Item;
 
 enum class BuffType {
-	DMG = 0, 
-	SPD = 1,
-	PROT = 2,
-};
-
-class Recipe {
-public:
-    std::shared_ptr<Item> item =  nullptr;
-    std::vector<std::shared_ptr<Item>> items = std::vector<std::shared_ptr<Item>>();
-    bool unlocked = false;
-    Recipe(std::vector<std::shared_ptr<Item>> items) : items(items) {};
-    Recipe() {};
-    virtual std::shared_ptr<Item> getItem();
-    virtual std::shared_ptr<Item> craft(std::map<std::wstring, std::shared_ptr<Item>>& inv, int& curID, int& invTaken);
-    virtual std::string getType() const;
-    virtual void save(std::ostream& os);
-    virtual void load(std::istringstream& in);
+    DMG = 0,  // Damage / Weakness
+    SPD = 1,  // Speed / Slowness
+    PROT = 2,  // Porotection / Vulnerability
+    REG = 3,  // Regeneration / Poison
 };
 
 class Buff {
@@ -37,18 +23,20 @@ public:
     BuffType type = BuffType::DMG;
     int amount = 1;
     int duration = 0;
-    bool isMultiplier = false;
     bool isBuffing = false;
+    bool isNegative = false;
 
     Buff() {}
-    Buff(BuffType type, float amount, int duration, int isMultiplier) : type(type), amount(amount), duration(duration), isMultiplier(isMultiplier) {}
+    Buff(BuffType type, float amount, int duration, bool isNegative = false) : type(type), amount(amount), duration(duration), isNegative(isNegative) {}
 
     // Tick down buff duration by 1 turn
-    void tick();
+    void tick(Player* player);
 
-    virtual void save(std::ostream& os);
+    void save(std::ostream& os);
 
-    virtual void load(std::istringstream& in);
+    void load(std::istringstream& in);
+
+    std::pair<std::wstring, unsigned char> getType();
 };
 
 #endif // EFFECTIVE

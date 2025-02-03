@@ -4,6 +4,9 @@
 #define B_HEIGHT 30
 #define B_WIDTH 100
 
+#define M_HEIGHT 10
+#define M_WIDTH 50
+
 enum Colors {
 	WHITE = 37,
 	RED = 31,

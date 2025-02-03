@@ -3,13 +3,16 @@
 #include<sstream>
 #include<cwctype>
 #include<regex>
-
+#include<atomic>
+#include<mutex>
+#include<xaudio2.h>
 #if defined(_WIN32) || defined(_WIN64)
 #include<windows.h>
 #include<conio.h>
+
 #else
 #include<sys/ioctl.h>
-#include <dirent.h>
+#include<dirent.h>
 #include<unistd.h>
 #include<termios.h>
 #include<fcntl.h>
@@ -66,6 +69,8 @@ bool chance(int prob, int omega) {
 int distance(int x, int y, int x2, int y2) {
 	return (int)sqrtf((float)((y - y2) * (y - y2) + (x - x2) * (x - x2)));
 };
+
+
 
 void setWindow(int width, int height) {
 #if defined(_WIN32) || defined(_WIN64)
@@ -296,7 +301,6 @@ bool removeDirectoryRecursive(const std::wstring& dirPath) {
 	return true;
 #endif
 }
-
 
 // Main function to remove a directory and its contents
 bool removeDirectory(const std::wstring& dirPath) {

@@ -10,6 +10,7 @@
 #include<sstream>
 #include<codecvt>
 #include<locale>
+#include<thread>
 #include<vector>
 #include<memory>
 #include<array>
@@ -17,8 +18,10 @@
 #include<map>
 
 #if defined(_WIN32) || defined(_WIN64)
-#include<Windows.h>
+#pragma comment(lib, "winmm.lib")
+#include<windows.h>
 #include<conio.h>
+#include<wmp.h>
 #include<io.h>
 #else
 #include<sys/ioctl.h>
@@ -214,16 +217,28 @@ int startGame(bool load, int saveNum) {
 	isRunning = true;
 	bool isOnCurrentBoard = true;
 
+#if defined(_WIN32) || defined(_WIN64)
+	PlaySound(L"./sounds/game1.wav", NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
+#endif
+
 	// Player Variables
 	Player p;
 
 	registerAll();
 	pushRecipies(p);
 
-	if (load) 
+	if (load)
 		seed = p.load(curSavePath + L"player.sav", iFactory);
+	else
+		seed = (unsigned int)(time(NULL));
 
 	p.seed = seed;
+
+	srand(seed);
+
+	unsigned int boardSeeds[32];
+	for (int i = 0; i < 32; i++)
+		boardSeeds[i] = rand() % UINT_MAX + 1;
 
 	// Board Variables
 	std::vector<Board> boards;
@@ -235,13 +250,13 @@ int startGame(bool load, int saveNum) {
 			boards.push_back(b);
 		}
 
-	setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
+	setWindow((int)B_WIDTH + M_WIDTH, (int)B_HEIGHT + M_HEIGHT);
 	system("cls");
 
 	while (isRunning) {
 		if (!load) {
 			seed = (unsigned int)time(NULL);
-			Board b(B_WIDTH, B_HEIGHT, p, false, seed);
+			Board b(B_WIDTH, B_HEIGHT, p, false, boardSeeds[p.curFloor]);
 			boards.push_back(b);
 			boards[p.curFloor].boardInit();
 		}
@@ -249,11 +264,12 @@ int startGame(bool load, int saveNum) {
 
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.2.5\nSaving fully functional!", YELLOW).c_str());
+			write(color(L"Version: 0.2.6\nSaving fully functional!", YELLOW).c_str());
 
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
 			bool wait = false;
+			setWindow((int)B_WIDTH + M_WIDTH, (int)B_HEIGHT + M_HEIGHT);
 			while (ch == 0) {
 				if (kbhit_cross() && !wait) {
 					wait = true;
@@ -263,7 +279,7 @@ int startGame(bool load, int saveNum) {
 					if (ch == 27) {
 						setWindow((int)B_WIDTH, (int)B_HEIGHT);
 						int res = drawEscMenu();
-						setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
+						setWindow((int)B_WIDTH + M_WIDTH, (int)B_HEIGHT + M_HEIGHT);
 						if (res == 1) {
 							system("cls");
 							write(L"Saving...");
@@ -287,13 +303,13 @@ int startGame(bool load, int saveNum) {
 					else if (ch == 'I' || ch == 'i') {
 						setWindow((int)B_WIDTH, (int)B_HEIGHT);
 					    std::function<void()> info = p.showInventory();
-						setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
+						setWindow((int)B_WIDTH + M_WIDTH, (int)B_HEIGHT + M_HEIGHT);
 						boards[p.curFloor].drawBoardFull(info);
 					}
 					else if (ch == 'C' || ch == 'c') {
 						setWindow((int)B_WIDTH, (int)B_HEIGHT);
 						p.showCrafting();
-						setWindow((int)B_WIDTH + 50, (int)B_HEIGHT + 10);
+						setWindow((int)B_WIDTH + M_WIDTH, (int)B_HEIGHT + M_HEIGHT);
 						boards[p.curFloor].drawBoardFull();
 					}
 					else { 
@@ -373,7 +389,7 @@ bool drawDeadMenu() {
 	std::shared_ptr<MenuItem> back = createMenuItem(L"Back To Main Menu", GREEN);
 	std::shared_ptr<MenuItem> exit = createMenuItem(L"Leave Game", RED);
 	std::vector<std::shared_ptr<MenuItem>> mainOpts = { back, exit };
-	Menu escMenu(mainOpts, title);
+	Menu escMenu(mainOpts, title, true);
 
 	return escMenu.open();
 }
@@ -424,8 +440,9 @@ void registerItems() {
 
 void registerEnemies() {
 	eFactory.registerEnemy<Skeleton>();
-	eFactory.registerEnemy<Zombie>();
 	eFactory.registerEnemy<Assassin>();
+	eFactory.registerEnemy<Zombie>();
+	eFactory.registerEnemy<Snake>();
 }
 
 

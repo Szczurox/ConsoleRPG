@@ -30,13 +30,13 @@ public:
 
 	void drawBoardFull(std::function<void()> info = []() {});
 
-	void makeBoxRoof(int start, int w);
+	void makeBoxRoof(int start);
 
-	void makeBoxPiece(int start, int w);
-
-	void writeStats();
+	void makeBoxPiece(int start);
 
 	void writeBuff(BuffType type);
+
+	void writeStats();
 
 	void writeStats2();
 
@@ -55,6 +55,7 @@ public:
 private:
 	int width;
 	int height;
+	int boxSize = 44;
 	Player& p;
 
 	void drawTile(int  x, int y);

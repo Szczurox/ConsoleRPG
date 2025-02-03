@@ -98,7 +98,7 @@ public:
 	// Calculate player's damage
 	int attack();
 
-	void giveBuff(BuffType type, float amount, int duration, int isMultiplier = false);
+	std::pair<std::wstring, unsigned char> giveBuff(BuffType type, float amount, int duration, bool isNegative = false);
     
 	void buffStat(bool isBuff, std::vector<int*> stats, std::shared_ptr<Buff> buff);
 

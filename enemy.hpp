@@ -44,6 +44,9 @@ public:
 	// Calculate enemy damage
 	int attack();
 
+	// Apply any special attack effects to player
+	virtual std::pair<std::wstring, unsigned char> special(Player* p) { return { L"", 0 }; };
+
 	// Return randomised loot
 	template<class T, typename ... Args>
 	void randLoot(std::vector<std::shared_ptr<Item>>& vec, int maxAmount, int prob, int omega, Args ... args) {
@@ -60,7 +63,7 @@ public:
 
 	virtual std::vector<std::shared_ptr<Item>> getLoot();
 	// Handle fight
-	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> attacked(Player* p, bool first = false);
+	std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> attacked(Player* p, bool first = false);
 	// Class name of the enemy
 	virtual std::string getType() const;
 
@@ -126,6 +129,7 @@ public:
 		maxGold = 150;
 	}
 
+	virtual std::pair<std::wstring, unsigned char> special(Player* player);
 	virtual std::vector<std::shared_ptr<Item>> getLoot();
 };
 
@@ -140,13 +144,37 @@ public:
 		nameColor = BRIGHT_BLUE;
 		color = RED;
 		health = 20;
-		minDamage = 5;
-		maxDamage = 25;
+		minDamage = 6;
+		maxDamage = 10;
 		xp = 40;
 		minGold = 1;
 		maxGold = 256;
 	}
 
+	virtual std::pair<std::wstring, unsigned char> special(Player* player);
+	virtual std::vector<std::shared_ptr<Item>> getLoot();
+};
+
+class Snake : public Enemy {
+public:
+	Snake(int xC = 0, int yC = 0, int num = 0) {
+		x = xC;
+		y = yC;
+		roomNum = num;
+		name = L"Snake";
+		symbol = L"S";
+		nameColor = GREY;
+		color = GREEN;
+		health = 5;
+		minDamage = 3;
+		maxDamage = 5;
+		xp = 20;
+		speed = 2;
+		minGold = 0;
+		maxGold = 0;
+	}
+
+	virtual std::pair<std::wstring, unsigned char> special(Player* player);
 	virtual std::vector<std::shared_ptr<Item>> getLoot();
 };
 

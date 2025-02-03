@@ -153,6 +153,7 @@ void Board::save(std::wstring fileName) {
 
 void Board::load(std::wstring fileName, ItemFactory& iFactory, EnemyFactory& eFactory, NPCFactory& nFactory) {
 	std::ifstream file(fileName);
+	file >> seed;
 	for (int i = 0; i < board.size(); i++) {
 		for (int j = 0; j < board[0].size(); j++) {
 			std::shared_ptr<Enemy> enemy = board[i][j].load(file, iFactory, eFactory, nFactory);
@@ -173,6 +174,7 @@ void Board::boardInit() {
 		shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
 		p.addItem(std::shared_ptr<Item>(new Gambeson(10)));
 		p.addItem(std::shared_ptr<Item>(new WoodenSword(10)));
+		p.addItem(std::shared_ptr<Item>(new SacramentalBread()));
 		board[3][1] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
 		board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
 	}
@@ -199,77 +201,81 @@ void Board::drawBoard() {
 void Board::drawBoardFull(std::function<void()> info) {
 	p.checkBuffs();
 	drawBoard();
+	makeBoxRoof(1);
 	writeStats();
+	makeBoxRoof(7);
+	makeBoxRoof(8);
 	writeStats2();
+	makeBoxRoof(12);
+	makeBoxRoof(13);
 	writeStats3();
+	makeBoxRoof(17);
 	startInfo();
 	info();
 }
 
-void Board::makeBoxRoof(int start, int w) {
+void Board::makeBoxRoof(int start) {
 	setCursor(width + 1, start);
-	for (int i = 0; i < w; i++)
+	for (int i = 0; i < boxSize; i++)
 		std::wcout << L"=";
 }
 
-void Board::makeBoxPiece(int start, int w) {
+void Board::makeBoxPiece(int start) {
 	setCursor(width + 1, start);
 	std::wcout << "|";
-	for (int i = 0; i < w - 2; i++)
+	for (int i = 0; i < boxSize - 2; i++)
 		std::wcout << L" ";
 	std::wcout << "|";
 	setCursor(width + 3, start);
 }
 
-void Board::writeStats() {
-	makeBoxRoof(1, 34);
-	makeBoxPiece(2, 34);
-	write(color(L"Level: %\n", GREEN).c_str(), p.level);
-	makeBoxPiece(3, 34);
-	write(color(L"Experience: %/%\n", GREEN).c_str(), p.xp, p.expForNext);
-	makeBoxPiece(4, 34);
-	write(color(L"Health: %/%\n", RED).c_str(), p.health, p.maxHealth);
-	makeBoxPiece(5, 34);
-	write(color(L"Faith: %\n", p.faith < 0 ? RED : (p.faith > 0 ? YELLOW : GREY)).c_str(), p.faith);
-	makeBoxPiece(6, 34);
-	write(color(L"Gold: %\n", YELLOW).c_str(), p.gold);
-	makeBoxRoof(7, 34);
-}
-
 void Board::writeBuff(BuffType type) {
 	auto it = std::find_if(p.buffs.begin(), p.buffs.end(), [type](std::shared_ptr<Buff> b) {
 		return b->type == type;
-		});
+	});
 
 	if (it != p.buffs.end()) {
 		std::shared_ptr<Buff> buff = p.buffs[std::distance(p.buffs.begin(), it)];
-		write(color(L" (%% for %)", RED).c_str(), buff->isMultiplier ? L"×" : L"+", buff->amount, buff->duration);
+		std::wstring amount = std::to_wstring(buff->amount);
+		std::wstring power = (buff->isNegative ? color(L"-", RED) : color(L"+", GREEN)) + color(amount, buff->isNegative ? RED : GREEN);
+		std::pair<std::wstring, unsigned int> type = buff->getType();
+		write(L" (% [%] for %)", color(type.first, type.second), power, buff->duration);
 	}
 }
 
+void Board::writeStats() {
+	makeBoxPiece(2);
+	write(color(L"Level: %", GREEN).c_str(), p.level);
+	makeBoxPiece(3);
+	write(color(L"Experience: %/%", GREEN).c_str(), p.xp, p.expForNext);
+	makeBoxPiece(4);
+	write(color(L"Health: %/%", RED).c_str(), p.health, p.maxHealth);
+	writeBuff(BuffType::REG);
+	makeBoxPiece(5);
+	write(color(L"Faith: %", p.faith < 0 ? RED : (p.faith > 0 ? YELLOW : GREY)).c_str(), p.faith);
+	makeBoxPiece(6);
+	write(color(L"Gold: %", YELLOW).c_str(), p.gold);
+}
+
 void Board::writeStats2() {
-	makeBoxRoof(8, 34);
-	makeBoxPiece(9, 34);
+	makeBoxPiece(9);
 	write(color(L"Damage: %-%", RED).c_str(), p.minDamage, p.maxDamage);
 	writeBuff(BuffType::DMG);
-	makeBoxPiece(10, 34);
+	makeBoxPiece(10);
 	write(color(L"Defence: %", BLUE).c_str(), p.defence);
 	writeBuff(BuffType::PROT);
-	makeBoxPiece(11, 34);
-	write(color(L"Speed: %\n", YELLOW).c_str(), (p.weapon != nullptr ? p.weapon->speed : 1));
+	makeBoxPiece(11);
+	write(color(L"Speed: %", YELLOW).c_str(), (p.weapon != nullptr ? p.weapon->speed : 1));
 	writeBuff(BuffType::SPD);
-	makeBoxRoof(12, 34);
 }
 
 void Board::writeStats3() {
-	makeBoxRoof(13, 34);
-	makeBoxPiece(14, 34);
-	write(color(L"Floor: %\n", YELLOW).c_str(), p.curFloor);
-	makeBoxPiece(15, 34);
-	write(color(L"X: %\n", WHITE).c_str(), p.x);
-	makeBoxPiece(16, 34);
-	write(color(L"Y: %\n", WHITE).c_str(), p.y);
-	makeBoxRoof(17, 34);
+	makeBoxPiece(14);
+	write(color(L"Floor: %", YELLOW).c_str(), p.curFloor);
+	makeBoxPiece(15);
+	write(color(L"X: %", WHITE).c_str(), p.x);
+	makeBoxPiece(16);
+	write(color(L"Y: %", WHITE).c_str(), p.y);
 }
 
 // Update board on player action
@@ -305,8 +311,9 @@ int Board::movePlayer(char ch) {
 		}
 	int tileX = p.x + dx[move];
 	int tileY = p.y + dy[move];
-	type = board[tileX][tileY].type;
-
+	if (move != -2)
+		type = board[tileX][tileY].type;
+	
 	// Press T to wait a turn
 	std::shared_ptr<Enemy> enemy = board[tileX][tileY].enemy;
 	if (move != -2) {
@@ -390,8 +397,9 @@ int Board::movePlayer(char ch) {
 		}
 		case TileType::ENEM:
 			// Fighting enemy
-			std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> results = board[tileX][tileY].interacted(&p).enemy;
-			std::array<int, 5> result = results.first;
+			std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> results = board[tileX][tileY].interacted(&p).enemy;
+			std::array<int, 5> result = std::get<0>(results);
+			std::pair<std::wstring, unsigned char> effect = std::get<2>(results);
 			startInfo();
 			write(L"Dealt ");
 			write(color(L"% damage", RED).c_str(), result[0]);
@@ -413,7 +421,14 @@ int Board::movePlayer(char ch) {
 				auto it = std::find(enemies.begin(), enemies.end(), enemy);
 				if (it != enemies.end()) { enemies.erase(it); }
 				board[tileX][tileY].enemy = nullptr;
-				placeItems(results.second, tileX, tileY);
+				placeItems(std::get<1>(results), tileX, tileY);
+			}
+			if (effect.first != L"") {
+				write(L"\n");
+				write(color(L"%", enemy->nameColor).c_str(), enemy->name);
+				write(L" inflicted ");
+				write(color(L"%", effect.second).c_str(), effect.first);
+				write(L" on you!");
 			}
 			writeStats();
 			writeStats2();
@@ -521,8 +536,9 @@ void Board::moveEnemies(std::shared_ptr<Enemy> fought) {
 			else if (e != fought && p.curRoomNum == e->roomNum) {
 				move = -1;
 				// Enemy attacks
-				std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> results = e->attacked(&p, true);
-				std::array<int, 5> result = results.first;
+				std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> results = e->attacked(&p, true);
+				std::array<int, 5> result = std::get<0>(results);
+				std::pair<std::wstring, unsigned char> effect = std::get<2>(results);
 				startInfo();
 				write(L"Attacked by ");
 				write(color(L"%", e->nameColor).c_str(), e->name);
@@ -536,13 +552,20 @@ void Board::moveEnemies(std::shared_ptr<Enemy> fought) {
 					write(color(L"% experience", GREEN).c_str(), result[4]);
 					changeTile(e->x, e->y);
 					enemies.erase(enemies.begin() + i);
-					placeItems(results.second, e->x, e->y);
+					placeItems(std::get<1>(results), e->x, e->y);
 				}
 				else {
 					write(color(L"\n%", e->nameColor).c_str(), e->name);
 					write(L" has ");
 					write(color(L"% health", RED).c_str(), e->health);
 					write(L" left");
+				}
+				if (effect.first != L"") {
+					write(L"\n");
+					write(color(L"%", e->nameColor).c_str(), e->name);
+					write(L" inflicted ");
+					write(color(L"%", effect.second).c_str(), effect.first);
+					write(L" on you!");
 				}
 				if (!p.attackedThisTurn) p.attackedThisTurn = true;
 				else write(L"\nMultiple enemies are attacking you!");

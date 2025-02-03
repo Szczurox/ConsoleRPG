@@ -265,11 +265,11 @@ void ZombieMeat::writeMessage() {
 
 // Blood Oath
 int BloodOath::used(Player* p) {
-    int healthChange = randMinMax(5, 20);
+    int healthChange = randMinMax(10, 30);
     p->health -= healthChange;
     p->maxHealth -= healthChange;
     p->baseDamage += randMinMax(1, 3);
-    if (p->faith < 1) {
+    if (p->faith < -1) {
         p->health -= p->health / 2;
         p->giveBuff(BuffType::DMG, 6, 67);
     }
@@ -289,7 +289,7 @@ int SacramentalBread::used(Player* p) {
         p->faith++;
     }
     else {
-        p->maxHealth += 10 + p->faith;
+        p->maxHealth += 10 + p->faith * 10;
         p->health = p->maxHealth;
     }
     if (p->faith > -1)

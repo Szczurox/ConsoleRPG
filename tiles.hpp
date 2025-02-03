@@ -4,6 +4,7 @@
 #include<vector>
 #include<array>
 #include<utility>
+#include<tuple>
 
 class NPC;
 class Player;
@@ -30,12 +31,12 @@ enum class TileType {
 };
 
 struct InteractionResult {
-	std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> enemy = { {}, {} };
+	std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> enemy = { {0, 0, 0, 0, 0}, {}, {L"", 0} };
 	std::shared_ptr<SoldInfo> soldInfo = nullptr;
 	int result = 0;
 
 	InteractionResult(std::shared_ptr<SoldInfo> info);
-	InteractionResult(std::pair<std::array<int, 5>, std::vector<std::shared_ptr<Item>>> enemy) : enemy(enemy) {};
+	InteractionResult(std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> enemy) : enemy(enemy) {};
 	InteractionResult(int result) : result(result) {};
 };
 

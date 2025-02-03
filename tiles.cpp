@@ -238,12 +238,15 @@ std::vector<Tile> BasicRoom::summonEntities() {
 	randEntity<Gambeson>(e, 1, 1, 20 * floor, randMinMax(1, 100));
 
 	// Enemies
-	if (floor < 2)
+	if (floor < 2) {
 		randEntity<Skeleton>(e, 2, 1, 3, 0, 0, num);
+		randEntity<Snake>(e, 2, 1, 6, 0, 0, num);
+	}
 	else if (floor < 4) {
 		randEntity<Skeleton>(e, 3, 1, 3, 0, 0, num);
 		randEntity<Zombie>(e, 2, 1, 3, 0, 0, num);
 		randEntity<Assassin>(e, 2, 1, 4, 0, 0, num);
+		randEntity<Snake>(e, 2, 1, 6, 0, 0, num);
 	}
 	else {
 		randEntity<Skeleton>(e, 2, 1, 3, 0, 0, num);
