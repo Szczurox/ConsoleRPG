@@ -46,7 +46,7 @@ public:
 	int movePlayer(char ch);
 
 	// Enemies move AI
-	void moveEnemies(std::shared_ptr<Enemy> fought);
+	void moveEnemies(std::shared_ptr<Enemy> fought = nullptr);
 
 	int placeItems(std::vector<std::shared_ptr<Item>> items, int tileX, int tileY);
 
@@ -56,6 +56,7 @@ private:
 	int width;
 	int height;
 	int boxSize = 44;
+	bool moveDone = true;
 	Player& p;
 
 	void drawTile(int  x, int y);

@@ -183,13 +183,13 @@ void Room::create(std::vector<std::vector<Tile>>& board, std::vector<std::shared
 		board[i][yH - 1] = Tile(TileType::WALL, num, false);
 	}
 	if (doors[0] != -1)
-		board[doors[0]][y] = Tile(true, num, neighbours[0], false, neighboursType[0] == RoomType::SECRET);
+		board[doors[0]][y] = Tile(true, num, neighbours[0], false, (neighboursType[0] == RoomType::SECRET || type == RoomType::SECRET));
 	if (doors[1] != -1)
-		board[doors[1]][yH - 1] = Tile(true, num, neighbours[1], false, neighboursType[1] == RoomType::SECRET);
+		board[doors[1]][yH - 1] = Tile(true, num, neighbours[1], false, (neighboursType[1] == RoomType::SECRET || type == RoomType::SECRET));
 	if (doors[2] != -1)
-		board[x][doors[2]] = Tile(true, num, neighbours[2], false, neighboursType[2] == RoomType::SECRET);
+		board[x][doors[2]] = Tile(true, num, neighbours[2], false, (neighboursType[2] == RoomType::SECRET || type == RoomType::SECRET));
 	if (doors[3] != -1)
-		board[xW - 1][doors[3]] = Tile(true, num, neighbours[3], false, neighboursType[3] == RoomType::SECRET);
+		board[xW - 1][doors[3]] = Tile(true, num, neighbours[3], false, (neighboursType[3] == RoomType::SECRET || type == RoomType::SECRET));
 
 	summonSetEntities(board);
 

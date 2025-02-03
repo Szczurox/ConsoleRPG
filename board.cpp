@@ -174,7 +174,6 @@ void Board::boardInit() {
 		shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
 		p.addItem(std::shared_ptr<Item>(new Gambeson(10)));
 		p.addItem(std::shared_ptr<Item>(new WoodenSword(10)));
-		p.addItem(std::shared_ptr<Item>(new SacramentalBread()));
 		board[3][1] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
 		board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
 	}
@@ -280,6 +279,9 @@ void Board::writeStats3() {
 
 // Update board on player action
 int Board::movePlayer(char ch) {
+	while (!moveDone) {};
+
+	moveDone = false;
 	int dx[4] = { 0, 0, -1, 1 };
 	int dy[4] = { -1, 1, 0, 0 };
 
@@ -309,14 +311,14 @@ int Board::movePlayer(char ch) {
 		default:
 			return 0;
 		}
-	int tileX = p.x + dx[move];
-	int tileY = p.y + dy[move];
-	if (move != -2)
-		type = board[tileX][tileY].type;
-	
 	// Press T to wait a turn
-	std::shared_ptr<Enemy> enemy = board[tileX][tileY].enemy;
 	if (move != -2) {
+		int tileX = p.x + dx[move];
+		int tileY = p.y + dy[move];
+		if (move != -2)
+			type = board[tileX][tileY].type;
+
+		std::shared_ptr<Enemy> enemy = board[tileX][tileY].enemy;
 		std::shared_ptr<Item> item = board[tileX][tileY].item;
 
 		// Interactions
@@ -417,11 +419,6 @@ int Board::movePlayer(char ch) {
 			else {
 				write(L" in % hit(s) killing the enemy\nGained ", result[1]);
 				write(color(L"% experience", GREEN).c_str(), result[4]);
-				changeTile(tileX, tileY);
-				auto it = std::find(enemies.begin(), enemies.end(), enemy);
-				if (it != enemies.end()) { enemies.erase(it); }
-				board[tileX][tileY].enemy = nullptr;
-				placeItems(std::get<1>(results), tileX, tileY);
 			}
 			if (effect.first != L"") {
 				write(L"\n");
@@ -432,6 +429,14 @@ int Board::movePlayer(char ch) {
 			}
 			writeStats();
 			writeStats2();
+
+			if (enemy->health < 0) {
+				changeTile(tileX, tileY);
+				auto it = std::find(enemies.begin(), enemies.end(), enemy);
+				if (it != enemies.end()) { enemies.erase(it); }
+				board[tileX][tileY].enemy = nullptr;
+				placeItems(std::get<1>(results), tileX, tileY);
+			}
 			p.attackedThisTurn = true;
 		}
 
@@ -448,14 +453,19 @@ int Board::movePlayer(char ch) {
 
 
 		changeTile(p.x, p.y, Tile(TileType::PLAY, p.curRoomNum));
+
+		p.checkBuffs();
+		writeStats();
+		writeStats2();
+
+		if (move != -1)
+			moveEnemies(enemy);
+	}
+	else {
+		moveEnemies();
 	}
 
-	p.checkBuffs();
-	writeStats();
-	writeStats2();
-
-	if (move != -1)
-		moveEnemies(enemy);
+	moveDone = true;
 
 	return 0;
 }
@@ -550,9 +560,6 @@ void Board::moveEnemies(std::shared_ptr<Enemy> fought) {
 				if (e->health <= 0) {
 					write(L" killing the enemy\nGained ");
 					write(color(L"% experience", GREEN).c_str(), result[4]);
-					changeTile(e->x, e->y);
-					enemies.erase(enemies.begin() + i);
-					placeItems(std::get<1>(results), e->x, e->y);
 				}
 				else {
 					write(color(L"\n%", e->nameColor).c_str(), e->name);
@@ -569,6 +576,11 @@ void Board::moveEnemies(std::shared_ptr<Enemy> fought) {
 				}
 				if (!p.attackedThisTurn) p.attackedThisTurn = true;
 				else write(L"\nMultiple enemies are attacking you!");
+				if (e->health <= 0) {
+					changeTile(e->x, e->y);
+					enemies.erase(enemies.begin() + i);
+					placeItems(std::get<1>(results), e->x, e->y);
+				}
 				writeStats();
 				writeStats2();
 				p.attackedThisTurn = true;
