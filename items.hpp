@@ -26,8 +26,11 @@ enum class ItemType {
 class ItemFactory {
 public:
 	std::map<std::string, std::function<std::shared_ptr<Item>()>> itemMap;
+
 	ItemFactory() {};
+
 	std::shared_ptr<Item> createItem(const std::string& type);
+
 	template <class T>
 	void registerItem() {
 		std::string type = typeid(T).name();
@@ -61,12 +64,14 @@ public:
 
 	Item() {}
 	Item(const wchar_t* name, ItemType type) {};
+
 	virtual int picked(Player* player) {
 		return 1;
 	}
 	virtual int used(Player* player) {
 		return 1;
 	}
+	virtual void special(Player* player, int dmg) {};
 	virtual void writeMessage() {};
 	virtual std::pair<int, std::function<void()>> menuHandle(Player* p, std::vector<std::shared_ptr<MenuItem>>& options, std::vector<std::shared_ptr<MenuItem>>& texts);
 	virtual std::pair<int, std::function<void()>> itemMenu(Player* p) {
@@ -84,6 +89,7 @@ public:
 	Weapon() {
 		stackable = false;
 	};
+
     int used(Player* player);
     void onRemove(Player* p);
 	void writeMessage() {};
@@ -96,6 +102,7 @@ public:
 	Armor() {
 		stackable = false;
 	};
+
     int used(Player* player);
     void onRemove(Player* p);
 	void writeMessage() {};
@@ -106,6 +113,7 @@ public:
 class Usable : public Item {
 public:
 	Usable() {};
+
     int used(Player* player);
     void onRemove(Player* p);
     virtual void writeMessage();
@@ -116,6 +124,7 @@ public:
 class Resource : public Item {
 public:
 	Resource() {};
+
 	int used(Player* player);
 	void onRemove(Player* p);
 	std::pair<int, std::function<void()>> itemMenu(Player* p);
@@ -195,6 +204,44 @@ public:
 	}
 };
 
+class CeremonialRobes : public Armor {
+public:
+	CeremonialRobes(int dur = 666) {
+		name = L"Ceremonial Robes";
+		lore = L"Sacrifice gives power";
+		colord = RED;
+		symbol = L"O";
+		prot = 0;
+		reqLevel = 1;
+		durability = dur;
+		maxDurability = 666;
+		cost = 3000;
+	}
+
+	virtual void special(Player* player, int dmg);
+};
+
+class Chasuble : public Armor {
+public:
+	Chasuble(int dur = 333) {
+		name = L"Chasuble";
+		lore = L"May your faith protect you";
+		colord = YELLOW;
+		symbol = L"O";
+		prot = 3;
+		reqLevel = 3;
+		durability = dur;
+		maxDurability = 333;
+		cost = 7777;
+	}
+
+	virtual void special(Player* player, int dmg);
+	int used(Player* player);
+	void onRemove(Player* p);
+
+};
+
+
 // Consumables
 class HealthPotion : public Usable {
 public:
@@ -215,10 +262,6 @@ public:
 
 class ZombieMeat : public Usable {
 public:
-	virtual int used(Player* p);
-
-	virtual void writeMessage();
-
 	ZombieMeat(int cnt = 1) {
 		name = L"Zombie Meat";
 		lore = L"The odour is unbearable, but it looks somewhat edible";
@@ -228,40 +271,44 @@ public:
 		cost = 200;
 		count = cnt;
 	}
+
+	virtual int used(Player* p);
+
+	virtual void writeMessage();
 };
 
 class BloodOath : public Usable {
 public:
-	virtual int used(Player* p);
-
-	virtual void writeMessage();
-
 	BloodOath(int cnt = 1) {
 		name = L"Blood Oath";
 		lore = L"You feel dark energy emanating from it";
 		colord = RED;
 		symbol = L"Ω";
 		stackable = true;
-		cost = 6666;
+		cost = 666;
 		count = cnt;
 	}
+
+	virtual int used(Player* p);
+
+	virtual void writeMessage();
 };
 
 class SacramentalBread : public Usable {
 public:
-	virtual int used(Player* p);
-
-	virtual void writeMessage();
-
 	SacramentalBread(int cnt = 1) {
 		name = L"Sacramental Bread";
 		lore = L"It shines with a bright light";
 		colord = YELLOW;
 		symbol = L"☼";
 		stackable = true;
-		cost = 7777;
+		cost = 777;
 		count = cnt;
 	}
+
+	virtual int used(Player* p);
+
+	virtual void writeMessage();
 };
 
 // Resources

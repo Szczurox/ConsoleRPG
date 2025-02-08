@@ -268,7 +268,7 @@ int startGame(bool load, int saveNum) {
 
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.2.7.3\nBugfix!", YELLOW).c_str());
+			write(color(L"Version: 0.2.8\nBugfix!", YELLOW).c_str());
 
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;

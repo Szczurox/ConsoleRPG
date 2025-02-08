@@ -73,8 +73,11 @@ int Weapon::used(Player* player) {
 }
 
 void Weapon::onRemove(Player* p) {
-    if (p->weapon.get() == this)
-        p->weapon = nullptr;
+    if (p->weapon.get() == this) {
+        p->weapon = nullptr;    
+        p->minDamage = p->baseDamage;
+        p->maxDamage = p->baseDamage;
+    }
     p->removeItem(name, 1, ID);
 }
 
@@ -126,8 +129,10 @@ int Armor::used(Player* player) {
 }
 
 void Armor::onRemove(Player* p) {
-    if (p->armor.get() == this)
+    if (p->armor.get() == this) {
         p->armor = nullptr;
+        p->defence = 0;
+    }
     p->removeItem(name, 1, ID);
 }
 
@@ -230,6 +235,54 @@ int GoldPile::picked(Player* player) {
     player->gold += count;
     return 0;
 }
+
+// Weapons
+
+// Armor
+void CeremonialRobes::special(Player* p, int dmg) {
+    if (dmg >= p->health && chance(1, 6) && p->faith > 0)
+        p->health = 6 + dmg;
+    if (dmg > p->maxHealth / 6 && (chance(1, 6) || (p->faith < -2 && chance(1, 2))))
+        p->giveBuff(BuffType::DMG, 6, 6);
+    else if (p->health < p->maxHealth / 6)
+        p->giveBuff(BuffType::DMG, 4, 1);
+    else if (p->health < p->maxHealth / 2)
+        p->giveBuff(BuffType::DMG, 2, 1);
+}
+
+void Chasuble::special(Player* p, int dmg) {
+    if (dmg >= p->health && chance(1, 3) && p->faith >= 0)
+        p->health = 33 + dmg;
+    if (chance(1, 3))
+        p->giveBuff(BuffType::PROT, 1, 3);
+    if (p->health < p->maxHealth / 3 && (chance(1, 7) || (p->faith > 2 && chance(1, 3))))
+        p->giveBuff(BuffType::REG, 7, 3);
+    else if(chance(1, 7) || (p->faith > 2 && chance(1, 3)))
+        p->giveBuff(BuffType::REG, 3, 3);
+}
+
+int Chasuble::used(Player* player) {
+    if (player->armor.get() != this) {
+        player->defence = prot;
+        player->faith++;
+        return 2;
+    }
+    else {
+        player->defence = 0;
+        player->faith--;
+        return 4;
+    }
+}
+
+void Chasuble::onRemove(Player* p) {
+    if (p->armor.get() == this) {
+        p->armor = nullptr;
+        p->faith--;
+        p->defence = 0;
+    }
+    p->removeItem(name, 1, ID);
+}
+
 
 // Consumables
 // Health Potion

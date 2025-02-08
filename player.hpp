@@ -102,7 +102,7 @@ public:
     
 	void buffStat(bool isBuff, std::vector<int*> stats, std::shared_ptr<Buff> buff);
 
-	void checkBuffs();
+	void checkBuffs(bool passTurn = true);
 };
 
 

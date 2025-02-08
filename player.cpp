@@ -279,13 +279,13 @@ void Player::checkLevelUp() {
 int Player::hit(int dmg) {
 	if (armor != nullptr) {
 		armor->durability--;
-		if (armor->durability <= 0) {
-			removeItem(armor->name, 1, armor->ID);
-			armor = nullptr;
-			defence = 0;
-		}
+		armor->special(this, dmg);
+		checkBuffs(false);
 	}
 	health -= std::max<int>(dmg - defence, dmg / 4);
+	if (armor != nullptr)
+		if (armor->durability <= 0)
+			armor->onRemove(this);
 	return health;
 }
 
@@ -294,14 +294,14 @@ int Player::attack() {
 		return 0;
 	if (weapon != nullptr) {
 		weapon->durability--;
-		if (weapon->durability <= 0) {
-			removeItem(weapon->name, 1, weapon->ID);
-			weapon = nullptr;
-			maxDamage = baseDamage;
-			minDamage = baseDamage;
-		}
+		weapon->special(this, 0);
+		checkBuffs(false);
 	}
-	return randMinMax(minDamage, maxDamage);
+	int dmg = randMinMax(minDamage, maxDamage);
+	if (weapon != nullptr)
+		if (weapon->durability <= 0)
+			weapon->onRemove(this);
+	return dmg;
 }
 
 std::pair<std::wstring, unsigned char> Player::giveBuff(BuffType type, float amount, int duration, bool isNegative) {
@@ -320,7 +320,7 @@ void Player::buffStat(bool isBuff, std::vector<int*> stats, std::shared_ptr<Buff
 	buff->isBuffing = true;
 }
 
-void Player::checkBuffs() {
+void Player::checkBuffs(bool passTurn) {
 	updateStats();
 
 	for (int i = 0; i < buffs.size(); i++) {
@@ -346,13 +346,14 @@ void Player::checkBuffs() {
 			};
 		};
 
-		updateStats();
-
 		if (buff->duration <= 0) {
 			buffs.erase(buffs.begin() + i);
 			return;
 		}
 
-		buff->tick(this);
+		if(passTurn)
+			buff->tick(this);
 	}
+
+	updateStats();
 }

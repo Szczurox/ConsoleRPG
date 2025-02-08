@@ -76,8 +76,6 @@ void Tile::draw(Player* p) {
 	else std::wcout << L" ";
 }
 
-InteractionResult::InteractionResult(std::shared_ptr<SoldInfo> info) : soldInfo(info), result(info->res) {};
-
 InteractionResult Tile::interacted(Player* p, int par) {
 	if (type == TileType::SECRET_DOOR)
 		type = TileType::DOOR;
@@ -228,7 +226,6 @@ void Room::create(std::vector<std::vector<Tile>>& board, std::vector<std::shared
 				board[i][j] = Tile(num);
 }
 
-
 std::vector<Tile> BasicRoom::summonEntities() {
 	std::vector<Tile> e;
 	// Items
@@ -272,26 +269,38 @@ std::vector<Tile> StairRoom::summonEntities() {
 	return e;
 }
 
-
 std::vector<Tile> SecretRoom::summonEntities() {
 	std::vector<Tile> e;
-	int roomType = randMinMax(0, 2);
+	int roomType = randMinMax(0, 3);
 	if (roomType == 0) {
 		randEntity<BloodOath>(e, 1, 1, 1);
 		randEntity<IronShortsword>(e, 1, 1, 6, randMinMax(6, 66));
 	}
-	if (roomType == 1) {
-		randEntity<SacramentalBread>(e, 1, 1, 1);
-		randEntity<HealthPotion>(e, 1, 1, 3);
+	else if (roomType == 1) {
+		int itemType = randMinMax(0, 3);
+		if(itemType == 3)
+			randEntity<Chasuble>(e, 1, 1, 1);
+		else
+			randEntity<SacramentalBread>(e, 1, 1, 1);
+		randEntity<HealthPotion>(e, 3, 1, 3);
+	}
+	else if (roomType == 2) {
+		std::vector<std::shared_ptr<Item>> shop;
+		shop.push_back(std::shared_ptr<Item>(new CeremonialRobes()));
+		shop.push_back(std::shared_ptr<Item>(new BloodOath()));
+		shop.push_back(std::shared_ptr<Item>(new IronShortsword()));
+		randEntity<DemonShop>(e, 1, 1, 1, shop);
+		randEntity<IronShortsword>(e, 1, 1, 6, randMinMax(6, 66));
 	}
 	else {
+		randEntity<GoldPile>(e, 5, 1, 1, 1 * floor, 100 * floor);
+		randEntity<GoldPile>(e, 3, 1, 4, 1 * floor, 100 * floor);
 		randEntity<HealthPotion>(e, 5, 1, 5);
 		randEntity<IronShortsword>(e, 1, 1, 10, randMinMax(2, 200));
 		randEntity<Gambeson>(e, 1, 1, 5 * floor, randMinMax(1, 100));
 	}
 	return e;
 }
-
 
 std::vector<Tile> Tresury::summonEntities() {
 	std::vector<Tile> e;

@@ -43,8 +43,8 @@ Board::Board(int width, int height, Player& player, bool loading, unsigned int s
 	// Add data for creating random amount of random rooms
 	for (int i = 0; i < 30; i++) {
 		int roomType = randMinMax(0, 100);
-		int roomWidth = randMinMax(7, 20);
-		int roomHeight = randMinMax(4, 7);
+		int roomWidth = randMinMax(10, 20);
+		int roomHeight = randMinMax(5, 7);
 		// Space between rooms horizontally
 		int bufferX = randMinMax(1, 6);
 		int yRoom = lastY + roomHeight;
@@ -167,25 +167,17 @@ void Board::load(std::wstring fileName, ItemFactory& iFactory, EnemyFactory& eFa
 void Board::boardInit() {
 	board[p.x][p.y] = Tile(TileType::PLAY, p.curRoomNum, true);
 	if (p.curFloor == 0) {
-		p.giveBuff(BuffType::DMG, 1, 10);
 		std::vector<std::shared_ptr<Item>> shop;
 		shop.push_back(std::shared_ptr<Item>(new WoodenSword()));
 		shop.push_back(std::shared_ptr<Item>(new Gambeson()));
 		shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
-		p.addItem(std::shared_ptr<Item>(new Gambeson(10)));
-		p.addItem(std::shared_ptr<Item>(new WoodenSword(10)));
+		p.addItem(std::shared_ptr<Item>(new Gambeson(25)));
+		p.addItem(std::shared_ptr<Item>(new WoodenSword(25)));
 		board[3][1] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
 		board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
 	}
-	else {
-		std::vector<std::shared_ptr<Item>> shop;
-		shop.push_back(std::shared_ptr<Item>(new WoodenSword()));
-		shop.push_back(std::shared_ptr<Item>(new Gambeson()));
-		shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
-		shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
-		shop.push_back(std::shared_ptr<Item>(new HealthPotion()));
-		board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
-	}
+	else
+		board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(p.curFloor)), 0);
 }
 
 void Board::drawBoard() {
@@ -229,17 +221,25 @@ void Board::makeBoxPiece(int start) {
 }
 
 void Board::writeBuff(BuffType type) {
-	auto it = std::find_if(p.buffs.begin(), p.buffs.end(), [type](std::shared_ptr<Buff> b) {
-		return b->type == type;
-	});
+	std::vector<std::shared_ptr<Buff>> matchingBuffs;
+	std::copy_if(p.buffs.begin(), p.buffs.end(), std::back_inserter(matchingBuffs),
+		[type](std::shared_ptr<Buff> b) { return b->type == type; });
 
-	if (it != p.buffs.end()) {
-		std::shared_ptr<Buff> buff = p.buffs[std::distance(p.buffs.begin(), it)];
-		std::wstring amount = std::to_wstring(buff->amount);
-		std::wstring power = (buff->isNegative ? color(L"-", RED) : color(L"+", GREEN)) + color(amount, buff->isNegative ? RED : GREEN);
-		std::pair<std::wstring, unsigned int> type = buff->getType();
-		write(L" (% [%] for %)", color(type.first, type.second), power, buff->duration);
+	if (matchingBuffs.size() <= 0) return;
+
+	int power = 0;
+	int duration = 0;
+
+	std::pair<std::wstring, unsigned int> buffType = matchingBuffs[0]->getType();
+
+	for (std::shared_ptr<Buff> buff : matchingBuffs) {
+		if (buff->duration > duration) 
+			duration = buff->duration;
+		power += buff->isNegative ? -buff->amount : buff->amount;
 	}
+
+	std::wstring powerS = (power < 0 ? color(L"-", RED) : color(L"+", GREEN)) + color(std::to_wstring(power), power < 0 ? RED : GREEN);
+	write(L" (% [%] for %)", color(buffType.first, buffType.second), power, std::to_wstring(duration));
 }
 
 void Board::writeStats() {
@@ -334,19 +334,9 @@ int Board::movePlayer(char ch) {
 		case TileType::NPC:
 		{
 			InteractionResult res = board[tileX][tileY].interacted(&p);
-			std::shared_ptr<SoldInfo> info = res.soldInfo;
 			drawBoardFull();
-			if (res.result >= 0) {
-				startInfo();
-				write(L"Bought ");
-				write(color(info->name, info->color).c_str());
-				write(L" for ");
-				write(color(L"% gold", YELLOW).c_str(), info->cost);
-			}
-			else if (res.result == -2) {
-				startInfo();
-				write(L"You don't have enough % to buy %!", color(L"gold", YELLOW), color(info->name, info->color));
-			}
+			startInfo();
+			res.soldInfo();
 			break;
 		}
 		case TileType::PATH:

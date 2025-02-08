@@ -33,7 +33,8 @@ public:
 	unsigned char colord = BRIGHT_BLUE;
 	std::vector<std::shared_ptr<Item>> inv = std::vector<std::shared_ptr<Item>>();
 
-	virtual std::shared_ptr<SoldInfo> interacted(Player* p) { return std::shared_ptr<SoldInfo>(new SoldInfo()); }
+	virtual std::function<void()> interacted(Player* p) { return [this]() { writeMessage(-1, -1); }; }
+	virtual void writeMessage(int choice, int res) {};
 
 	NPC() {};
 
@@ -77,6 +78,8 @@ public:
 		colord = YELLOW;
 	}
 
+	Shop(int floor);
+
 	Shop(std::vector<std::shared_ptr<Item>> inventory) {
 		inv = inventory;
 		name = L"Shopkeeper";
@@ -85,7 +88,31 @@ public:
 		colord = YELLOW;
 	}
 
-	virtual std::shared_ptr<SoldInfo> interacted(Player* p);
+	virtual std::function<void()> interacted(Player* p);
+	virtual void writeMessage(int choice, int res);
+};
+
+class DemonShop : public NPC {
+public:
+	DemonShop(int floor);
+
+	DemonShop() {
+		name = L"Demon";
+		symbol = L"☻";
+		nameColor = RED;
+		colord = GREY;
+	}
+
+	DemonShop(std::vector<std::shared_ptr<Item>> inventory) {
+		inv = inventory;
+		name = L"Demon";
+		symbol = L"☻";
+		nameColor = RED;
+		colord = GREY;
+	}
+
+	virtual std::function<void()> interacted(Player* p);
+	virtual void writeMessage(int choice, int res);
 };
 
 #endif // !NPCC
