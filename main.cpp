@@ -56,6 +56,7 @@ int main() {
 	std::wcout << L"\033[?25l";
 	// Clear the entire screen
 	system("cls");
+
 	std::shared_ptr<MenuItem> title = createMenuItem(L"Console RPG ", BRIGHT_CYAN);
 	std::shared_ptr<MenuItem> newGame = createMenuItem(L"New Game", BRIGHT_GREEN);
 	std::shared_ptr<MenuItem> loadSave = createMenuItem(L"Continue", YELLOW);
@@ -65,8 +66,8 @@ int main() {
 	Menu mainMenu(mainOpts, title, true);
 
 	bool end = false;
-	bool repeat = false;
 	int res = 1;
+
 	while (!end) {
 		int choice = mainMenu.open();
 		switch (choice)
@@ -78,7 +79,7 @@ int main() {
 			res = chooseSave();
 			break;
 		case 2:
-			infoMenu();
+			infoMenu(true);
 			break;
 		default:
 			res = 0;
@@ -268,7 +269,7 @@ int startGame(bool load, int saveNum) {
 
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.2.8\nBugfix!", YELLOW).c_str());
+			write(color(L"Version: 0.2.9\nBeggars!", YELLOW).c_str());
 
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
@@ -400,20 +401,21 @@ bool drawDeadMenu() {
 
 
 void infoMenu(bool isMenu) {
-	std::shared_ptr<MenuItem> text0 = createMenuItem(L" Controls", WHITE);
-	std::shared_ptr<MenuItem> text1 = createMenuItem(L"W / Up Arrow - Up", WHITE);
-	std::shared_ptr<MenuItem> text2 = createMenuItem(L"S / Down Arrow - Down", WHITE);
-	std::shared_ptr<MenuItem> text3 = createMenuItem(L"A / Left Arrow - Left", WHITE);
-	std::shared_ptr<MenuItem> text4 = createMenuItem(L"D / Right Arrow - Right", WHITE);
-	std::shared_ptr<MenuItem> text5 = createMenuItem(L"I - Inventory", WHITE);
-	std::shared_ptr<MenuItem> text6 = createMenuItem(L"C - Crafting", WHITE);
-	std::shared_ptr<MenuItem> text7 = createMenuItem(L"Esc - Back / Open Escape Menu", WHITE);
-	std::shared_ptr<MenuItem> text8 = createMenuItem(L" ", WHITE);
+	std::vector<std::shared_ptr<MenuItem>> texts;
 
-	std::vector<std::shared_ptr<MenuItem>> texts = { text0, text1, text2, text3, text4, text5, text6, text7, text8 };
+	texts.push_back(createMenuItem(L" Controls", WHITE));
+	texts.push_back(createMenuItem(L"W / Up Arrow - Up", WHITE));
+	texts.push_back(createMenuItem(L"S / Down Arrow - Down", WHITE));
+	texts.push_back(createMenuItem(L"A / Left Arrow - Left", WHITE));
+	texts.push_back(createMenuItem(L"D / Right Arrow - Right", WHITE));
+	texts.push_back(createMenuItem(L"I - Inventory", WHITE));
+	texts.push_back(createMenuItem(L"C - Crafting", WHITE));
+	texts.push_back(createMenuItem(L"Esc - Back / Open Escape Menu", WHITE));
+
 	if (!isMenu) {
+		texts.push_back(createMenuItem(L" ", WHITE));
 		texts.push_back(createMenuItem(L"Stats", WHITE));
-		std::wstring seedStr = L" Floor Seed: " + std::to_wstring(seed);
+		std::wstring seedStr = L" Seed: " + std::to_wstring(seed);
 		texts.push_back(createMenuItem(seedStr, YELLOW));
 	}
 

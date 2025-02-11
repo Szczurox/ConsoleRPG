@@ -158,7 +158,7 @@ public:
 
 class IronShortsword : public Weapon {
 public:
-	IronShortsword(int dur = 200) {
+	IronShortsword(int dur = 250) {
 		name = L"Iron Shortsword";
 		lore = L"Quick weapon, but not very accurate";
 		colord = BRIGHT_BLUE;
@@ -168,7 +168,7 @@ public:
 		speed = 2;
 		reqLevel = 2;
 		durability = dur;
-		maxDurability = 200;
+		maxDurability = 250;
 		cost = 4000;
 	}
 };

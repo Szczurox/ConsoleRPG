@@ -115,4 +115,19 @@ public:
 	virtual void writeMessage(int choice, int res);
 };
 
+class Beggar : public NPC {
+public:
+	Beggar() {
+		name = L"Beggar";
+		symbol = L"☻";
+		nameColor = WHITE;
+		colord = WHITE;
+	}
+
+	Beggar(int floor);
+
+	virtual std::function<void()> interacted(Player* p);
+	virtual void writeMessage(int choice, int res);
+};
+
 #endif // !NPCC

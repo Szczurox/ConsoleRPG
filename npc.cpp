@@ -182,3 +182,84 @@ std::function<void()> DemonShop::interacted(Player* p) {
 
 	return [this, choice]() {  writeMessage(choice, -1); };
 }
+
+Beggar::Beggar(int floor) {
+	name = L"Beggar";
+	symbol = L"☻";
+	nameColor = WHITE;
+	colord = WHITE;
+
+	for (int i = 0; i < randMinMax(1, 3); i++) {
+		int rand = randMinMax(0, 100);
+		if (rand > 950)
+			inv.push_back(std::shared_ptr<Item>(new SacramentalBread()));
+		else if (rand > 750)
+			inv.push_back(std::shared_ptr<Item>(new Gambeson()));
+		else if (rand > 500)
+			inv.push_back(std::shared_ptr<Item>(new WoodenSword()));
+		else 
+			inv.push_back(std::shared_ptr<Item>(new HealthPotion()));
+	}
+	inv.push_back(std::shared_ptr<Item>(new HealthPotion()));
+}
+
+void Beggar::writeMessage(int choice, int res) {
+	if (choice == 0) {
+		int randomResponse = randMinMax(0, 2);
+		if(randomResponse == 0)
+			write(L"Beggar: Thank you!");
+		else if (randomResponse == 1)
+			write(L"Beggar: My gratitude!");
+		else if (randomResponse == 2)
+			write(L"Beggar: I won't forget your help!");
+	}
+	else if (choice == 1) {
+		if (res != -1) {
+			write(L"Beggar: Thank you so much! Here, I have something that may help you.\n");
+			write(L"Picked up ");
+			write(color(inv[res]->name, inv[res]->colord).c_str());
+			inv.erase(inv.begin() + res);
+		}
+		else write(L"Beggar: I wish I could give you more.\n");
+	}
+	else if (choice == 2) {
+		write(L"Beggar: %\n", color(L"Bless your soul!", YELLOW));
+		write(color(L"You feel better", YELLOW).c_str());
+	}
+}
+
+std::function<void()> Beggar::interacted(Player* p) {
+	std::shared_ptr<MenuItem> nameMenu = createMenuItem(name, nameColor);
+	std::shared_ptr<MenuItem> message = createMenuItem(L"Can you help a poor man?", WHITE);
+	std::vector<std::shared_ptr<MenuItem>> texts({ nameMenu, message });
+	std::vector<std::shared_ptr<MenuItem>> options;
+	std::wstring s = L"Donate " + color(L"100 gold", YELLOW) + color(p->gold < 100 ? L" (not enough gold)" : L"", RED);
+	options.push_back(createMenuItem(2, s));
+	options.push_back(createMenuItem(L"Back", WHITE));
+
+	Menu menu(options, texts, true);
+
+	int choice = -3;
+	choice = menu.open();
+	if (choice == 0 && p->gold >= 100) {
+		p->gold -= 100;
+		int randomBeg = randMinMax(0, 1000);
+		if(randomBeg > 900) {
+			if (inv.size() > 0) {
+				int randIt = randMinMax(0, inv.size() - 1);
+				p->addItem(inv[randIt]);
+				return [this, randIt]() { writeMessage(1, randIt); };
+			}
+			else return[this]() { writeMessage(1, -1); };
+		}
+		else if(nameColor != YELLOW && randomBeg > 850) {
+			nameColor = YELLOW;
+			p->faith++;
+			p->health = p->maxHealth;
+			p->giveBuff(BuffType::PROT, 3, 33);
+			return [this]() { writeMessage(2, 0); };
+		}
+		return [this]() { writeMessage(0, 0); };
+	}
+	return [this, choice]() {  writeMessage(-1, -1); };
+}

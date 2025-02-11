@@ -333,7 +333,9 @@ int Board::movePlayer(char ch) {
 		}
 		case TileType::NPC:
 		{
+			setWindow((int)B_WIDTH, (int)B_HEIGHT);
 			InteractionResult res = board[tileX][tileY].interacted(&p);
+			setWindow((int)B_WIDTH + M_WIDTH, (int)B_HEIGHT + M_HEIGHT);
 			drawBoardFull();
 			startInfo();
 			res.soldInfo();

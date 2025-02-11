@@ -230,7 +230,7 @@ std::vector<Tile> BasicRoom::summonEntities() {
 	std::vector<Tile> e;
 	// Items
 	randEntity<GoldPile>(e, std::min(width * height / 10, 3), 1, 3, 1, 100);
-	randEntity<HealthPotion>(e, 3, 1, 10);
+	randEntity<HealthPotion>(e, 2, 1, 10);
 	randEntity<WoodenSword>(e, 1, 1, 20 * floor, randMinMax(1, 100));
 	randEntity<Gambeson>(e, 1, 1, 20 * floor, randMinMax(1, 100));
 
@@ -271,7 +271,7 @@ std::vector<Tile> StairRoom::summonEntities() {
 
 std::vector<Tile> SecretRoom::summonEntities() {
 	std::vector<Tile> e;
-	int roomType = randMinMax(0, 3);
+	int roomType = randMinMax(0, 4);
 	if (roomType == 0) {
 		randEntity<BloodOath>(e, 1, 1, 1);
 		randEntity<IronShortsword>(e, 1, 1, 6, randMinMax(6, 66));
@@ -289,15 +289,20 @@ std::vector<Tile> SecretRoom::summonEntities() {
 		shop.push_back(std::shared_ptr<Item>(new CeremonialRobes()));
 		shop.push_back(std::shared_ptr<Item>(new BloodOath()));
 		shop.push_back(std::shared_ptr<Item>(new IronShortsword()));
+		shop.push_back(std::shared_ptr<Item>(new BoneArmor()));
 		randEntity<DemonShop>(e, 1, 1, 1, shop);
 		randEntity<IronShortsword>(e, 1, 1, 6, randMinMax(6, 66));
+	}
+	else if (roomType == 3) {
+		randEntity<Beggar>(e, 1, 1, 1, floor);
+		randEntity<Gambeson>(e, 1, 1, 6, randMinMax(200, 200));
 	}
 	else {
 		randEntity<GoldPile>(e, 5, 1, 1, 1 * floor, 100 * floor);
 		randEntity<GoldPile>(e, 3, 1, 4, 1 * floor, 100 * floor);
 		randEntity<HealthPotion>(e, 5, 1, 5);
-		randEntity<IronShortsword>(e, 1, 1, 10, randMinMax(2, 200));
-		randEntity<Gambeson>(e, 1, 1, 5 * floor, randMinMax(1, 100));
+		randEntity<IronShortsword>(e, 1, 1, 10, randMinMax(20, 200));
+		randEntity<Gambeson>(e, 2, 1, 5 * floor, randMinMax(18, 180));
 	}
 	return e;
 }
