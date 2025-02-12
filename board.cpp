@@ -33,6 +33,9 @@ Board::Board(int width, int height, Player& player, bool loading, unsigned int s
 	srand(seed);
 	system("cls");
 	std::wcout << L"loading...";
+	constexpr int EMPTY_NEIGHBOURS[4] = { -1, -1, -1, -1 };
+	int dx[4] = { 0, 0, -1, 1 };
+	int dy[4] = { -1, 1, 0, 0 };
 	std::vector<std::vector<std::shared_ptr<Room>>> rooms;
 	std::vector<std::shared_ptr<Room>> curFloor;
 	int lastX = 0;
@@ -84,19 +87,24 @@ Board::Board(int width, int height, Player& player, bool loading, unsigned int s
 
 	// Create all the rooms on the board
 	for (int i = 0; i < hSize; i++) {
-		int dx[4] = { 0, 0, -1, 1 };
-		int dy[4] = { -1, 1, 0, 0 };
 		int wSize = (int)rooms[i].size();
 		int wSize2 = -1;
 		for (int j = 0; j < wSize; j++) {
 			for (int d = 0; d < 4; d++) {
+				if (rooms[i][j]->type == RoomType::SECRET) continue;
 				if (d == 0 && i - 1 >= 0 && j >= rooms[(size_t)i - 1].size()) continue;
 				if (d == 1 && i + 1 < hSize && j >= rooms[(size_t)i + 1].size()) continue;
 				int dI = i + dy[d];
 				int dJ = j + dx[d];
 				if (dI >= 0 && dJ >= 0 && dI < hSize && dJ < wSize) {
+					bool hasNoConnections = std::equal(std::begin(rooms[dI][dJ]->neighbours), std::end(rooms[dI][dJ]->neighbours), std::begin(EMPTY_NEIGHBOURS));
+					if (rooms[dI][dJ]->type == RoomType::SECRET && !hasNoConnections) continue;
 					rooms[i][j]->neighbours[d] = rooms[dI][dJ]->num;
 					rooms[i][j]->genDoor(d, rooms[dI][dJ]->type == RoomType::SECRET);
+					if (rooms[dI][dJ]->type == RoomType::SECRET && hasNoConnections) {
+						rooms[dI][dJ]->neighbours[d == 0 ? 1 : d == 1 ? 0 : d == 2 ? 3 : 2] = rooms[i][i]->num;
+						rooms[dI][dJ]->genDoor(d == 0 ? 1 : d == 1 ? 0 : d == 2 ? 3 : 2);
+					}
 				}
 			}
 			rooms[i][j]->create(board, enemies, p.curFloor);
@@ -175,14 +183,15 @@ void Board::boardInit() {
 		switch (p.character) {
 		case Character::WARRIOR:
 			p.maxHealth = 110;
-			p.addItem(std::shared_ptr<Item>(new Gambeson(100)));
-			p.addItem(std::shared_ptr<Item>(new WoodenSword(50)));
+			p.addItem(std::shared_ptr<Item>(new Gambeson(150)));
+			p.addItem(std::shared_ptr<Item>(new WoodenSword(75)));
 			break;
 		case Character::MAGE:
 			p.addItem(std::shared_ptr<Item>(new WandOfLightning(80)));
 			p.addItem(std::shared_ptr<Item>(new HealthPotion(2)));
-			p.maxHealth = 90;
-			p.health = 90;
+			p.addItem(std::shared_ptr<Item>(new MageRobes(500)));
+			p.maxHealth = 80;
+			p.health = 80;
 			p.faith = 1;
 			break;
 		case Character::ROGUE:
@@ -197,9 +206,15 @@ void Board::boardInit() {
 		}
 		board[3][1] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
 		board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(shop)), 0);
+		board[5][1] = Tile(std::shared_ptr<NPC>(new Smith()), 0);
 	}
-	else
+	else {
 		board[4][1] = Tile(std::shared_ptr<NPC>(new Shop(p.curFloor)), 0);
+		if(chance(1, 2))
+			board[5][1] = Tile(std::shared_ptr<NPC>(new Smith()), 0);
+		if (chance(1, 5))
+			board[3][1] = Tile(std::shared_ptr<WoodenSword>(new WoodenSword(randMinMax(10, 30))), 0);
+	}
 }
 
 void Board::drawBoard() {
@@ -297,7 +312,7 @@ void Board::writeStats2() {
 	write(color(L"Damage: %-%", RED).c_str(), p.minDamage, p.maxDamage);
 	writeBuff(BuffType::DMG);
 	makeBoxPiece(12);
-	write(color(L"Defence: %", BRIGHT_BLUE).c_str(), p.defence);
+	write(color(L"Defence: %", BLUE).c_str(), p.defence);
 	writeBuff(BuffType::PROT);
 	makeBoxPiece(13);
 	write(color(L"Attack Speed: %", YELLOW).c_str(), p.speed);
@@ -427,6 +442,7 @@ int Board::movePlayer(char ch) {
 			write(L" to % ");
 			write(color(L"%", enemy->nameColor).c_str(), enemy->name);
 			if (enemy->health > 0) {
+				curBottom += 2;
 				write(L" in % hit(s)\nRecieved ", result[1]);
 				write(color(L"% damage", RED).c_str(), result[2]);
 				write(L" in % hit(s)\n", result[3]);
@@ -435,11 +451,10 @@ int Board::movePlayer(char ch) {
 				write(color(L"% health", RED).c_str(), enemy->health);
 				write(L" left");
 			}
-			else {
-				write(L" in % hit(s), killing the enemy\nGained ", result[1]);
-				write(color(L"% experience", GREEN).c_str(), result[4]);
-			}
+			else
+				write(L" in % hit(s), killing the enemy", result[1]);
 			if (effect.first != L"") {
+				curBottom++;
 				write(color(L"\n%", enemy->nameColor).c_str(), enemy->name);
 				write(L" inflicted ");
 				write(color(L"%", effect.second).c_str(), effect.first);
@@ -533,10 +548,8 @@ int Board::selectEnemy(char ch, std::shared_ptr<Item> item) {
 		write(L"Dealt ");
 		write(color(L"% damage", RED).c_str(), dmg);
 		write(L" to % in % hit(s)", color(selectable[boardSelected]->name, selectable[boardSelected]->nameColor).c_str(), i);
-		if (selectable[boardSelected]->health <= 0) {
-			write(L", killing the enemy\nGained ");
-			write(color(L"% experience", GREEN).c_str(), selectable[boardSelected]->xp);
-		}
+		if (selectable[boardSelected]->health <= 0)
+			write(L", killing the enemy");
 		for (i = 0; i < std::max(p.baseSpeed - selectable[boardSelected]->speed + 1, 1); i++) {
 			if (item->stackable && (p.character == Character::ROGUE ? chance(3, 4) : true))
 				p.removeItem(item->name, 1);
@@ -642,18 +655,18 @@ void Board::moveEnemies(std::shared_ptr<Enemy> fought) {
 				write(L" in % hit(s)\nDealt ", result[3]);
 				write(color(L"% damage", RED).c_str(), result[0]);
 				write(L" in % hit(s)", result[1]);
-				if (e->health <= 0) {
-					write(L", killing the enemy\nGained ");
-					write(color(L"% experience", GREEN).c_str(), result[4]);
-				}
+				curBottom += 2;
+				if (e->health <= 0)
+					write(L", killing the enemy");
 				else {
+					curBottom++;
 					write(color(L"\n%", e->nameColor).c_str(), e->name);
 					write(L" has ");
 					write(color(L"% health", RED).c_str(), e->health);
 					write(L" left");
 				}
 				if (effect.first != L"") {
-					setCursor(0, height);
+					setCursor(0, curBottom);
 					write(color(L"%", e->nameColor).c_str(), e->name);
 					write(L" inflicted ");
 					write(color(L"%", effect.second).c_str(), effect.first);
@@ -672,7 +685,9 @@ void Board::moveEnemies(std::shared_ptr<Enemy> fought) {
 			std::vector<std::shared_ptr<Item>> drop = e->getLoot();
 			if (p.character == Character::ROGUE && chance(1, 10))
 				drop.push_back(std::shared_ptr<Item>(new GoldPile(std::max(20, e->minGold), std::max(20, e->maxGold))));
-			p.xp += e->xp;
+			setCursor(0, curBottom);
+			write(L"\nGained");
+			write(color(L" % experience", GREEN).c_str(), p.giveExp(e->xp));
 			p.checkLevelUp();
 			enemies.erase(enemies.begin() + i);
 			placeItems(drop, e->x, e->y);
@@ -689,6 +704,7 @@ void Board::startInfo() {
 	for (int i = 0; i < width; i++)
 		std::wcout << L"=";
 	setCursor(0, height + 1);
+	curBottom = height + 1;
 }
 
 void Board::drawTile(int  x, int y) {

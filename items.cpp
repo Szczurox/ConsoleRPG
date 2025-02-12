@@ -46,11 +46,17 @@ std::string Item::getType() const {
 }
 
 void Item::save(std::ostream& os) {
-    os << getType() << " " << count << " " << durability << "\n";
+    os << getType() << " " << ID << " " << count << " " << durability << "\n";
 }
 
 void Item::load(std::istringstream& in) {
-    in >> count >> durability;
+    int temp;
+    if (!stackable)
+        in >> ID >> count >> durability;
+    else {
+        in >> temp;
+        in >> count >> durability;
+    }
 }
 
 int Weapon::used(Player* player) {
@@ -262,8 +268,13 @@ int GoldPile::picked(Player* player) {
 // Weapons
 
 // Armor
+void MageRobes::special(Player* p, int dmg) {
+    if (dmg >= p->health && chance(1, max(3, 7 - p->faith)) && p->faith > 0)
+        p->health = 7 + dmg;
+}
+
 void CeremonialRobes::special(Player* p, int dmg) {
-    if (dmg >= p->health && chance(1, 6) && p->faith > 0)
+    if (dmg >= p->health && chance(1, 6) && p->faith <= 0)
         p->health = 6 + dmg;
     if (dmg > p->maxHealth / 6 && (chance(1, 6) || (p->faith < -2 && chance(1, 2))))
         p->giveBuff(BuffType::DMG, 6, 6);

@@ -6,6 +6,7 @@
 #include"player.hpp"
 #include"items.hpp"
 #include"utils.hpp"
+#include"const.hpp"
 
 std::shared_ptr<Item> Recipe::getItem() {
     return std::shared_ptr<Item>(new Item);

@@ -15,14 +15,14 @@ enum MoveType {
 	OTHER = 6,
 };
 
-void writeColor(const wchar_t* text, unsigned char color = WHITE);
+void writeColor(const wchar_t* text, unsigned char color = WHITE, unsigned char bgColor = BLACK);
 
-std::wstringstream colorTextStream(const wchar_t* text, int color = GREEN);
+std::wstringstream colorTextStream(const wchar_t* text, unsigned char color = WHITE, unsigned char bgColor = BLACK);
 
 std::wstringstream mergeTextStream(const wchar_t* text, const wchar_t* text2);
 
-std::wstring color(std::wstring text, unsigned char color = WHITE);
-std::wstring color(const wchar_t* text, unsigned char color = WHITE);
+std::wstring color(std::wstring text, unsigned char color = WHITE, unsigned char bgColor = BLACK);
+std::wstring color(const wchar_t* text, unsigned char color = WHITE, unsigned char bgColor = BLACK);
 
 void write(const wchar_t* format);
 

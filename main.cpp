@@ -342,7 +342,7 @@ int startGame(bool load, int saveNum, Character character) {
 
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.3.0\nClasses! Ranged Weapons!", YELLOW).c_str());
+			write(color(L"Version: 0.3.1\nSmith! Bugfix!", YELLOW).c_str());
 
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
@@ -526,11 +526,17 @@ void registerItems() {
 	// Armor
 	iFactory.registerItem<Gambeson>();
 	iFactory.registerItem<BoneArmor>();
+	iFactory.registerItem<MageRobes>();
+	iFactory.registerItem<Chasuble>();
+	iFactory.registerItem<CeremonialRobes>();
 	// Consumables
 	iFactory.registerItem<HealthPotion>();
 	iFactory.registerItem<ZombieMeat>();
 	iFactory.registerItem<BloodOath>();
 	iFactory.registerItem<SacramentalBread>();
+	// Ranged
+	iFactory.registerItem<WandOfLightning>();
+	iFactory.registerItem<Shuriken>();
 	// Resources
 	iFactory.registerItem<Bone>();
 }
@@ -546,6 +552,9 @@ void registerEnemies() {
 
 void registerNPCs() {
 	nFactory.registerNPC<Shop>();
+	nFactory.registerNPC<DemonShop>();
+	nFactory.registerNPC<Beggar>();
+	nFactory.registerNPC<Smith>();
 }
 
 

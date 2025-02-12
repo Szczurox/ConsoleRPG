@@ -271,3 +271,74 @@ std::function<void()> Beggar::interacted(Player* p) {
 	}
 	return [this, choice]() {  writeMessage(-1, -1); };
 }
+
+
+void Smith::writeMessage(int choice, int res) {
+	if (res == 1) {
+		std::wstring s = color(L"Fixed ", BRIGHT_GREEN) + color(inv[0]->name, inv[0]->colord) + color(L" successfully!", BRIGHT_GREEN);
+		write(s.c_str());
+	}
+	else if (res == 0) {
+		std::wstring s = color(L"Failed to fix ", RED) + color(inv[0]->name, inv[0]->colord) + color(L"... It's durability decreased further", RED);
+		write(s.c_str());
+	}
+	else if (res == -2)
+		write(L"You don't have enough % to fix %!", color(L"gold", YELLOW), color(inv[0]->name, inv[0]->colord));
+	inv = {};
+}
+
+std::function<void()> Smith::interacted(Player* p) {
+	int success = 100 - npcMemory * 2;
+
+	std::shared_ptr<MenuItem> nameMenu = createMenuItem(name, nameColor);
+	std::shared_ptr<MenuItem> message = createMenuItem(L"Howdy! Do you need a quick fix? (Success: " + std::to_wstring(success) + L"%)", WHITE);
+	std::vector<std::shared_ptr<MenuItem>> texts({ nameMenu, message });
+	std::vector<std::shared_ptr<MenuItem>> options;
+	std::vector<std::shared_ptr<Item>> trueItems;
+	for (std::pair<std::wstring, std::shared_ptr<Item>> it : p->inv) {
+		std::shared_ptr<Item> item = it.second;
+		if (item->durability < item->maxDurability && !item->stackable) {
+			char durColor = RED;
+			if (item->durability * 100 / item->maxDurability > 30)
+				durColor = YELLOW;
+			if (item->durability * 100 / item->maxDurability > 60)
+				durColor = GREEN;
+			std::wstringstream s;
+			s << color(item->name, item->colord);
+			s << L" (" << color(std::to_wstring(item->durability), durColor) << color(L" / ", durColor) << color(std::to_wstring(item->maxDurability), durColor) << L")";
+			s << " : " << color(std::to_wstring(item->cost * (item->maxDurability - item->durability) / item->maxDurability / 3 * 2), YELLOW);
+			std::shared_ptr<MenuItem> itemMenu = createMenuItem(5, s.str());
+			trueItems.push_back(item);
+			options.push_back(itemMenu);
+		}
+	}
+	options.push_back(createMenuItem(L"Back", WHITE));
+
+	Menu menu(options, texts, true);
+
+	int choice = -3;
+	while (choice == -3) {
+		choice = menu.open();
+		if (choice >= 0 && choice < options.size() - 1) {
+			std::wstring name = trueItems[choice]->name;
+			unsigned char col = trueItems[choice]->colord;
+			int cost = trueItems[choice]->cost * (trueItems[choice]->maxDurability - trueItems[choice]->durability) / trueItems[choice]->maxDurability / 3 * 2;
+			inv.push_back(trueItems[choice]);
+			if (cost <= p->gold) {
+				p->gold -= cost;
+				npcMemory++;
+				if (chance(success, 100)) {
+					trueItems[choice]->durability = trueItems[choice]->maxDurability;
+					return [this]() {  writeMessage(0, 1); };
+				}
+				trueItems[choice]->durability = trueItems[choice]->durability / 2;
+				return [this]() {  writeMessage(0, 0); };
+			}
+			else
+				return [this]() {  writeMessage(0, -2); };
+		}
+		return [this]() {  writeMessage(0, -1); };
+	}
+
+	return [this, choice]() {  writeMessage(choice, -1); };
+}

@@ -139,18 +139,18 @@ void Menu::render() {
 		int size = m->texts[m->selected].size();
 		setCursor((B_WIDTH - 10) / 2 - size / 2 + m->colorsCount * 9, i + textsLeng + (space ? 1 : 0));
 		if (m->color != 0)
-			wprintf(L"\033[97;%dm%ls%ls%ls\033[m\n", m->color, i == option ? m->isSelectable ? L"< " : L"> " : L"  ", m->texts[m->selected].c_str(), i == option ? m->isSelectable ? L" >" : L" <" : L"  ");
+			wprintf(L"\033[40;%dm%ls%ls%ls\033[m\n", m->color, i == option ? m->isSelectable ? L"< " : L"> " : L"  ", m->texts[m->selected].c_str(), i == option ? m->isSelectable ? L" >" : L" <" : L"  ");
 		else
 			wprintf(L"%ls%ls%ls\n", i == option ? m->isSelectable ? L"< " : L"> " : L"  ", m->texts[m->selected].c_str(), i == option ? m->isSelectable ? L" >" : L" <" : L"  ");
 	}
 	if (opts.size() > 1) {
 		setCursor((B_WIDTH - 10) / 2 - 3, textsLeng + opts[curPage].size() + 1);
-		wprintf(L"\033[97;%dm(Page %d/%d)\033[m\n\033[?25l", WHITE, curPage + 1, static_cast<int>(opts.size()));
+		wprintf(L"\033[40;%dm(Page %d/%d)\033[m\n\033[?25l", WHITE, curPage + 1, static_cast<int>(opts.size()));
 	}
 	// If menu is empty write (empty), empty inventory
 	if ((int)opts[0].size() <= 0) {
 		setCursor((B_WIDTH - 10) / 2 - 3, textsLeng);
-		wprintf(L"\033[97;%dm(empty)\033[m\n\033[?25l", WHITE);
+		wprintf(L"\033[40;%dm(empty)\033[m\n\033[?25l", WHITE);
 	}
 }
 
@@ -162,14 +162,14 @@ void Menu::render(int prev) {
 	int size = n->texts[n->selected].size();
 	setCursor((B_WIDTH - 10) / 2 - size / 2 + n->colorsCount * 9, texts.size() + prev + (space ? 1 : 0));
 	if (n->color != 0)
-		wprintf(L"\x1b[2K\033[97;%dm%ls%ls%ls\033[m", n->color, L"  ", n->texts[n->selected].c_str(), L"  ");
+		wprintf(L"\x1b[2K\033[40;%dm%ls%ls%ls\033[m", n->color, L"  ", n->texts[n->selected].c_str(), L"  ");
 	else
 		wprintf(L"\x1b[2K%ls%ls%ls", L"  ", n->texts[n->selected].c_str(), L"  ");
 	// Newly selected element
 	int size2 = m->texts[m->selected].size();
 	setCursor((B_WIDTH - 10) / 2 - size2 / 2 + m->colorsCount * 9, texts.size() + option + (space ? 1 : 0));
 	if (m->color != 0)
-		wprintf(L"\x1b[2K\033[97;%dm%ls%ls%ls\033[m", m->color, m->isSelectable ? L"< " : L"> ", m->texts[m->selected].c_str(), m->isSelectable ? L" >" : L" <");
+		wprintf(L"\x1b[2K\033[40;%dm%ls%ls%ls\033[m", m->color, m->isSelectable ? L"< " : L"> ", m->texts[m->selected].c_str(), m->isSelectable ? L" >" : L" <");
 	else
 		wprintf(L"\x1b[2K%ls%ls%ls", m->isSelectable ? L"< " : L"> ", m->texts[m->selected].c_str(), m->isSelectable ? L" >" : L" <");
 }

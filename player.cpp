@@ -5,6 +5,7 @@
 #include<iostream>
 #include<fstream>
 #include<sstream>
+#include<codecvt>
 
 #include"player.hpp"
 #include"effective.hpp"
@@ -24,9 +25,18 @@ void Player::save(std::wstring fileName) {
 	for (std::shared_ptr<Buff> buff : buffs)
 		buff->save(playerSave);
 	playerSave << "EndBuff\n";
-	playerSave << seed << " " << static_cast<int>(character) << " " << curInvTaken << " " << health << " " << maxHealth << " " << baseDamage << " " << defence << " ";
+	playerSave << seed << " " << static_cast<int>(character) << " " << health << " " << maxHealth << " " << baseDamage << " " << defence << " ";
 	playerSave << baseSpeed << " " << gold << " " << xp << " " << expForNext << " " << level << " ";
-	playerSave << curRoomNum << " " << curFloor << " " << curItemID << " " << x << " " << y << " " << faith << "\n";
+	playerSave << curRoomNum << " " << curFloor << " " << curItemID << " " << x << " " << y << " " << faith;
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+	if (weapon != nullptr)
+		playerSave << converter.to_bytes(weapon->name) << weapon->ID << "\n";
+	else
+		playerSave << "null\n";
+	if (armor != nullptr)
+		playerSave << converter.to_bytes(armor->name) << armor->ID << "\n";
+	else
+		playerSave << "null\n";
 }
 
 unsigned int Player::load(std::wstring fileName, ItemFactory& factory) {
@@ -38,7 +48,7 @@ unsigned int Player::load(std::wstring fileName, ItemFactory& factory) {
 		iss >> itemType;
 		std::shared_ptr<Item> item = factory.createItem(itemType);
 		item->load(iss);
-		addItem(item);
+		addItem(item, true);
 	}
 	while (std::getline(file, line) && line != "EndRecs") {
 		std::istringstream iss(line);
@@ -56,13 +66,27 @@ unsigned int Player::load(std::wstring fileName, ItemFactory& factory) {
 		buffs.push_back(buff);
 	}
 	int characterInt;
-	file >> seed >> characterInt >> curInvTaken >> health >> maxHealth >> baseDamage >> defence >> baseSpeed >> gold >> xp >> expForNext >> level;
+	file >> seed >> characterInt >> health >> maxHealth >> baseDamage >> defence >> baseSpeed >> gold >> xp >> expForNext >> level;
 	file >> curRoomNum >> curFloor >> curItemID >> x >> y >> faith;
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+	std::string weaponStr = "";
+	std::string armorStr = "";
+	std::getline(file, weaponStr);
+	std::getline(file, armorStr);
+	std::wstring weaponStrW = converter.from_bytes(weaponStr);
+	std::wstring armorStrW = converter.from_bytes(armorStr);
+	OutputDebugStringW(armorStrW.c_str());
+	auto it = inv.find(weaponStrW);
+	if (it != inv.end())
+		weapon = it->second;
+	auto it2 = inv.find(armorStrW);
+	if (it2 != inv.end())
+		armor = it2->second;
 	character = static_cast<Character>(characterInt);
 	return seed;
 }
 
-void Player::addItem(std::shared_ptr<Item> item) {
+void Player::addItem(std::shared_ptr<Item> item, bool loading) {
 	if (item->stackable) {
 		if (inv.find(item->name) == inv.end()) {
 			inv.insert({ item->name, item });
@@ -72,9 +96,11 @@ void Player::addItem(std::shared_ptr<Item> item) {
 			inv[item->name]->count += item->count;
 	}
 	else {
-		curItemID++;
-		item->ID = curItemID;
-		std::wstring s = item->name + std::to_wstring(curItemID);
+		if (!loading) {
+			curItemID++;
+			item->ID = curItemID;
+		}
+		std::wstring s = item->name + std::to_wstring(item->ID);
 		inv.insert({ s, item });
 		curInvTaken++;
 	}
@@ -248,6 +274,16 @@ void Player::showCrafting() {
 				addItem(res);
 		}
 	}
+}
+
+int Player::giveExp(int exp) {
+	int given = exp;
+	if (armor != nullptr)
+		if (armor->name == L"Mage Robes")
+			given += exp / 10;
+	xp += given;
+	return given;
+
 }
 
 void Player::levelUp() {

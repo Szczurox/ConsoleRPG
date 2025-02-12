@@ -31,6 +31,7 @@ public:
 	const wchar_t* symbol = L"☻";
 	unsigned char nameColor = BRIGHT_BLUE;
 	unsigned char colord = BRIGHT_BLUE;
+	int npcMemory = 0;
 	std::vector<std::shared_ptr<Item>> inv = std::vector<std::shared_ptr<Item>>();
 
 	virtual std::function<void()> interacted(Player* p) { return [this]() { writeMessage(-1, -1); }; }
@@ -125,6 +126,19 @@ public:
 	}
 
 	Beggar(int floor);
+
+	virtual std::function<void()> interacted(Player* p);
+	virtual void writeMessage(int choice, int res);
+};
+
+class Smith : public NPC {
+public:
+	Smith() {
+		name = L"Smith";
+		symbol = L"☻";
+		nameColor = BRIGHT_WHITE;
+		colord = BRIGHT_WHITE;
+	}
 
 	virtual std::function<void()> interacted(Player* p);
 	virtual void writeMessage(int choice, int res);

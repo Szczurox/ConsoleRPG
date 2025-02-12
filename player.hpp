@@ -21,26 +21,26 @@ enum class BuffType;
 
 enum class Character {
 	// Warrior
-	// Starts with 110 max health
+	// 110 max health
 	// 20% chance for a buff (DMG if negative faith / REG if positive faith / PROT if neutral) upon taking damage
-	// Starts with: Gambeson (100/200), Wooden Sword (50/100)
+	// Starts with: Gambeson (150/200), Wooden Sword (75/100)
 	WARRIOR = 0,
 	// Mage
 	// Faith +1
-	// Starts with 90 max health
+	// 80 max health
 	// 50% chance to not lose durability on wand use
 	// Bonus wand damage based on level
-	// Starts with: Wand of Lightning, 2 Health Potions
+	// Starts with: Wand of Lightning, Mage Robes (grants +10% exp boost)
 	MAGE = 1, 
 	// Rogue
 	// Faith -1
 	// Speed +1
 	// Starts on level 2
-	// Starts with 80 max health
+	// 80 max health
 	// 25% chance to not lose a throwable item on throw
 	// 10% chance to spawn an additional gold pile after killing an enemy
 	// Higher accuracy (minimum damage) on throwable items
-	// Starts with Iron Shortsword (50/250), 25 Shurikens 
+	// Starts with: Iron Shortsword (50/250), 25 Shurikens 
 	ROGUE = 2
 };
 
@@ -93,7 +93,7 @@ public:
 		recipes[type] = recipe;
 	};
 
-	void addItem(std::shared_ptr<Item> item);
+	void addItem(std::shared_ptr<Item> item, bool loading = false);
 
 	int removeItem(std::wstring name, int count, int ID = 0);
 
@@ -112,6 +112,8 @@ public:
 
 	// C - show recipes
 	void showCrafting();
+
+	int giveExp(int exp);
 
 	void levelUp();
 

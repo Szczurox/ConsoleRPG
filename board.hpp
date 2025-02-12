@@ -59,6 +59,7 @@ private:
 	int height;
 	int boxSize = 44;
 	int boardSelected = 0;
+	int curBottom = 0;
 	bool moveDone = true;
 	Player& p;
 

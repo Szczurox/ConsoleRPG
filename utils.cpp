@@ -23,13 +23,13 @@
 #include"utils.hpp"
 #include"const.hpp"
 
-void writeColor(const wchar_t* text, unsigned char color) {
-	std::wprintf(L"\033[97;%dm%ls\033[m\033[?25l", color, text);
+void writeColor(const wchar_t* text, unsigned char color, unsigned char bgColor) {
+	std::wprintf(L"\033[%d;%dm%ls\033[m\033[?25l", bgColor + 10, color, text);
 }
 
-std::wstringstream colorTextStream(const wchar_t* text, int color) {
+std::wstringstream colorTextStream(const wchar_t* text, unsigned char color, unsigned char bgColor) {
 	std::wstringstream ss;
-	ss << L"\033[97;" << (int)color << L"m" << text << L"\033[m\033[?25l";
+	ss << L"\033[" << bgColor + 10 << ";" << (int)color << L"m" << text << L"\033[m\033[?25l";
 	return ss;
 }
 
@@ -39,12 +39,12 @@ std::wstringstream mergeTextStream(const wchar_t* text, const wchar_t* text2) {
 	return ss;
 }
 
-std::wstring color(std::wstring text, unsigned char color) {
-	return colorTextStream(text.c_str(), color).str();
+std::wstring color(std::wstring text, unsigned char color, unsigned char bgColor) {
+	return colorTextStream(text.c_str(), color, bgColor).str();
 }
 
-std::wstring color(const wchar_t* text, unsigned char color) {
-	return colorTextStream(text, color).str();
+std::wstring color(const wchar_t* text, unsigned char color, unsigned char bgColor) {
+	return colorTextStream(text, color, bgColor).str();
 }
 
 void write(const wchar_t* format) {

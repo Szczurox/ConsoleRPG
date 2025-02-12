@@ -218,6 +218,23 @@ public:
 	}
 };
 
+class MageRobes : public Armor {
+public:
+	MageRobes(int dur = 500) {
+		name = L"Mage Robes";
+		lore = L"Be blessed with wisdom";
+		colord = YELLOW;
+		symbol = L"π";
+		prot = 1;
+		reqLevel = 1;
+		durability = dur;
+		maxDurability = 500;
+		cost = 2000;
+	}
+
+	virtual void special(Player* player, int dmg);
+};
+
 class CeremonialRobes : public Armor {
 public:
 	CeremonialRobes(int dur = 666) {
