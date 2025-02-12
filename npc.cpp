@@ -46,10 +46,14 @@ Shop::Shop(int floor) {
 		int rand = randMinMax(0, 1000);
 		if (rand > 950)
 			inv.push_back(std::shared_ptr<Item>(new IronShortsword()));
-		if (rand > 900)
+		if (rand > 850)
 			inv.push_back(std::shared_ptr<Item>(new WoodenSword()));
-		else if (rand > 800)
+		else if (rand > 750)
 			inv.push_back(std::shared_ptr<Item>(new Gambeson()));
+		else if (rand > 700)
+			inv.push_back(std::shared_ptr<Item>(new WandOfLightning()));
+		else if (rand > 500)
+			inv.push_back(std::shared_ptr<Item>(new Shuriken(25)));
 		else
 			inv.push_back(std::shared_ptr<Item>(new HealthPotion()));
 	}
@@ -60,6 +64,8 @@ void Shop::writeMessage(int choice, int res) {
 	if (res >= 0) {
 		write(L"Bought ");
 		write(color(inv[choice]->name, inv[choice]->colord).c_str());
+		if(inv[choice]->count > 1)
+			write(L" × % ", inv[choice]->count);
 		write(L" for ");
 		write(color(L"% gold", YELLOW).c_str(), inv[choice]->cost);
 		inv.erase(inv.begin() + choice);
@@ -79,7 +85,7 @@ std::function<void()> Shop::interacted(Player* p) {
 		if (it->count > 0) {
 			count++;
 			std::wstringstream s;
-			s << color(it->name, it->colord) << " × " << it->count << " : " << color(std::to_wstring(it->cost), YELLOW);
+			s << color(it->name, it->colord) << " × " << it->count << " : " << color(std::to_wstring(it->cost * it->count), YELLOW);
 			std::shared_ptr<MenuItem> itemMenu = createMenuItem(2, s.str());
 			options.push_back(itemMenu);
 		}
@@ -94,7 +100,7 @@ std::function<void()> Shop::interacted(Player* p) {
 		if (choice >= 0 && choice < options.size() - 1) {
 			std::wstring name = inv[choice]->name;
 			unsigned char col = inv[choice]->colord;
-			int cost = inv[choice]->cost;
+			int cost = inv[choice]->cost * inv[choice]->count;
 			if (cost <= p->gold) {
 				p->gold -= cost;
 				p->addItem(inv[choice]);
@@ -130,9 +136,11 @@ DemonShop::DemonShop(int floor) {
 void DemonShop::writeMessage(int choice, int res) {
 	if (res >= 0) {
 		write(L"Sacrificed ");
-		write(color(L"% health", RED).c_str(), inv[choice]->cost);
+		write(color(L"% health", RED).c_str(), inv[choice]->cost / 200);
 		write(L" for ");
 		write(color(inv[choice]->name, inv[choice]->colord).c_str());
+		if (inv[choice]->count > 1)
+			write(L" × %", inv[choice]->count);
 		inv.erase(inv.begin() + choice);
 	}
 	else if (res == -2)

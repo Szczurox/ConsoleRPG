@@ -33,7 +33,7 @@ std::shared_ptr<Item> Recipe::craft(std::map<std::wstring, std::shared_ptr<Item>
 				std::wstringstream s;
 				s << L" (" << it->count << L"/" << req->count << L")";
 				std::wstring d = color(req->name, req->colord) + color(s.str(), enough ? GREEN : RED);
-				texts[cur]->text = d;
+				texts[cur]->texts[0] = d;
 				count++;
 				if (enough)
 					check++;

@@ -20,39 +20,38 @@ std::vector<std::shared_ptr<Item>> Enemy::getLoot() {
     return items;
 }
 
-std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> Enemy::attacked(Player* p, bool first) {
+std::tuple<std::array<int, 5>, std::pair<std::wstring, unsigned char>> Enemy::attacked(Player* p, bool first) {
     // Player dmg, number of player attacks, enemy dmg, number of enemy attacks
-	std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> attacks({ 0, 1, 0, 1, xp }, {}, {L"", 0});
-	int pSpeed;
-	if (p->weapon == nullptr) pSpeed = p->baseSpeed;
-	else pSpeed = p->weapon->speed + p->baseSpeed;
+	std::tuple<std::array<int, 5>, std::pair<std::wstring, unsigned char>> attacks({ 0, 1, 0, 1, xp }, {L"", 0});
 	// Player and enemy have same speed
-	if (pSpeed == speed) {
+	if (p->speed == speed) {
 		// Both attack each other once
 		int playerDmg = p->attack();
 		int enemyDmg = attack();
 		hit(playerDmg);
 		std::get<0>(attacks)[0] = playerDmg;
 		if (health > 0 || first) {
-			std::get<2>(attacks) = special(p);
+			std::get<1>(attacks) = special(p);
 			p->hit(attack());
 			std::get<0>(attacks)[2] = enemyDmg;
 		}
 	}
 	// Player is faster
-	else if (pSpeed > speed) {
+	else if (p->speed > speed) {
 		std::get<0>(attacks)[1] = 0;
 		// Player attacks playerSpeed - enemySpeed amount of times
-		for (int i = speed; i <= pSpeed; i++) {
+		for (int i = speed; i <= p->speed; i++) {
 			int playerDmg = p->attack();
 			hit(playerDmg);
 			std::get<0>(attacks)[0] += playerDmg;
 			std::get<0>(attacks)[1]++;
+			if (health <= 0)
+				break;
 		}
 		// Enemy attacks once if alive
 		int enemyDmg = attack();
 		if (health > 0 || first) {
-			std::get<2>(attacks) = special(p);
+			std::get<1>(attacks) = special(p);
 			p->hit(attack());
 			std::get<0>(attacks)[2] += enemyDmg;
 		}
@@ -61,9 +60,9 @@ std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std
 	else {
 		std::get<0>(attacks)[3] = 0;
 		// Enemy attacks enemySpeed - playerSpeed amount of times
-		for (int i = pSpeed; i <= speed; i++) {
+		for (int i = p->speed; i <= speed; i++) {
 			int enemyDmg = attack();
-			std::get<2>(attacks) = special(p);
+			std::get<1>(attacks) = special(p);
 			p->hit(attack());
 			std::get<0>(attacks)[2] += enemyDmg;
 			std::get<0>(attacks)[3]++;
@@ -72,12 +71,6 @@ std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std
 		int playerDmg = p->attack();
 		hit(playerDmg);
 		std::get<0>(attacks)[0] += playerDmg;
-	}
-
-	if (health <= 0) {
-		p->xp += xp;
-		p->checkLevelUp();
-		std::get<1>(attacks) = getLoot();
 	}
 
 	return attacks;

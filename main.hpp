@@ -3,6 +3,8 @@
 
 #include"menu.hpp"
 
+enum class Character;
+
 bool isRunning = true;
 
 unsigned int seed;
@@ -12,7 +14,11 @@ std::vector<int> seeds;
 // Find the lowest missing directory number or next available
 int findNextSaveDirectory(const std::wstring& dirPath);
 
-int startGame(bool load = 0, int saveNum = -1);
+int selectNewGame();
+
+void chooseSeed();
+
+int startGame(bool load = 0, int saveNum = -1, Character character = Character::WARRIOR);
 
 void infoMenu(bool isMenu = false);
 

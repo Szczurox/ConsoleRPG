@@ -24,7 +24,7 @@ void Player::save(std::wstring fileName) {
 	for (std::shared_ptr<Buff> buff : buffs)
 		buff->save(playerSave);
 	playerSave << "EndBuff\n";
-	playerSave << seed << " " << curInvTaken << " " << health << " " << maxHealth << " " << baseDamage << " " << defence << " ";
+	playerSave << seed << " " << static_cast<int>(character) << " " << curInvTaken << " " << health << " " << maxHealth << " " << baseDamage << " " << defence << " ";
 	playerSave << baseSpeed << " " << gold << " " << xp << " " << expForNext << " " << level << " ";
 	playerSave << curRoomNum << " " << curFloor << " " << curItemID << " " << x << " " << y << " " << faith << "\n";
 }
@@ -38,7 +38,7 @@ unsigned int Player::load(std::wstring fileName, ItemFactory& factory) {
 		iss >> itemType;
 		std::shared_ptr<Item> item = factory.createItem(itemType);
 		item->load(iss);
-		addItem(item, true);
+		addItem(item);
 	}
 	while (std::getline(file, line) && line != "EndRecs") {
 		std::istringstream iss(line);
@@ -55,13 +55,14 @@ unsigned int Player::load(std::wstring fileName, ItemFactory& factory) {
 		buff->load(iss);
 		buffs.push_back(buff);
 	}
-	file >> seed >> curInvTaken >> health >> maxHealth >> baseDamage >> defence >> baseSpeed >> gold >> xp >> expForNext >> level;
+	int characterInt;
+	file >> seed >> characterInt >> curInvTaken >> health >> maxHealth >> baseDamage >> defence >> baseSpeed >> gold >> xp >> expForNext >> level;
 	file >> curRoomNum >> curFloor >> curItemID >> x >> y >> faith;
-
+	character = static_cast<Character>(characterInt);
 	return seed;
 }
 
-void Player::addItem(std::shared_ptr<Item> item, bool isLoading) {
+void Player::addItem(std::shared_ptr<Item> item) {
 	if (item->stackable) {
 		if (inv.find(item->name) == inv.end()) {
 			inv.insert({ item->name, item });
@@ -71,10 +72,8 @@ void Player::addItem(std::shared_ptr<Item> item, bool isLoading) {
 			inv[item->name]->count += item->count;
 	}
 	else {
-		if (!isLoading) {
-			curItemID++;
-			item->ID = curItemID;
-		}
+		curItemID++;
+		item->ID = curItemID;
 		std::wstring s = item->name + std::to_wstring(curItemID);
 		inv.insert({ s, item });
 		curInvTaken++;
@@ -105,13 +104,13 @@ int Player::itemChar(std::wstring& s, std::shared_ptr<Item> item, bool selected)
 		durColor = YELLOW;
 	if (item->durability * 100 / item->maxDurability > 60)
 		durColor = GREEN;
-	str << color(item->name, item->colord) << color(dur, durColor) << color(selected ? L" ▼" : L"  ", YELLOW);
+	str << color(item->name, item->colord) << color(dur, durColor) << color(selected ? L" ▼" : L"", YELLOW);
 	s = str.str();
 	return 3;
 }
 
 int Player::itemChar(std::shared_ptr<MenuItem> m, std::shared_ptr<Item> item, bool selected) {
-	itemChar(m->text, item, selected);
+	itemChar(m->texts[m->selected], item, selected);
 	return 3;
 }
 
@@ -128,14 +127,15 @@ void Player::removeElement(int idx, std::vector<std::shared_ptr<MenuItem>>& it, 
 	it.erase(it.begin() + idx);
 	tIt.erase(tIt.begin() + idx);
 
-	inv.texts[0]->text = L"Inventory (" + std::to_wstring(tIt.size()) + L" / " + std::to_wstring(maxInvSpace) + L")";
+	inv.texts[0]->texts[0] = L"Inventory (" + std::to_wstring(tIt.size()) + L" / " + std::to_wstring(maxInvSpace) + L")";
 
 	// Refresh inventory menu
 	inv.init(it);
 }
 
 // I - show inventory
-std::function<void()> Player::showInventory() {
+// writeMessage, item selecting enemy for use
+std::pair<std::function<void()>, std::shared_ptr<Item>> Player::showInventory() {
 	std::vector<std::shared_ptr<MenuItem>> items = {};
 	std::vector<std::shared_ptr<Item>> trueItems = std::vector<std::shared_ptr<Item>>();
 	for (auto item : inv) {
@@ -168,9 +168,8 @@ std::function<void()> Player::showInventory() {
 
 	Menu inventory(items, title);
 
-	int choice = 0;
+	int choice = inventory.open();
 	while (choice != -1 && choice < trueItems.size()) {
-		choice = inventory.open(choice);
 		if (choice != -1 && choice < trueItems.size()) {
 			std::shared_ptr<Item> item = trueItems[choice];
 			// Item menu
@@ -205,17 +204,22 @@ std::function<void()> Player::showInventory() {
 			else if (result.first == 5) {
 				writeMessage = result.second;
 				if (item->count > 0)
-					itemCharStack(items[choice]->text, item);
+					itemCharStack(items[choice]->texts[0], item);
 				else
 					removeElement(choice, items, trueItems, inventory);
+			}
+			else if (result.first == 6) {
+				writeMessage = result.second;
+				return { writeMessage, trueItems[choice] };
 			}
 
 			if (item == armor || item == weapon)
 				itemChar(items[choice], item, true);
 			inventory.refresh();
 		}
+		choice = inventory.open(choice);
 	}
-	return writeMessage;
+	return { writeMessage, std::shared_ptr<Item>(new Item()) };
 }
 
 
@@ -262,10 +266,12 @@ void Player::updateStats() {
 	if (weapon != nullptr) {
 		minDamage = weapon->minDmg + baseDamage + buffDamage;
 		maxDamage = weapon->maxDmg + baseDamage + buffDamage;
+		speed = weapon->speed + baseSpeed + buffSpeed;
 	}
 	else {
 		minDamage = baseDamage + buffDamage;
 		maxDamage = baseDamage + buffDamage;
+		speed = baseSpeed + buffSpeed;
 	}
 }
 
@@ -283,6 +289,12 @@ int Player::hit(int dmg) {
 		checkBuffs(false);
 	}
 	health -= std::max<int>(dmg - defence, dmg / 4);
+	if (character == Character::WARRIOR && faith > 0 && chance(1, 5))
+		giveBuff(BuffType::REG, 1 + faith, 7);
+	else if (character == Character::WARRIOR && faith < 0 && chance(1, 5))
+		giveBuff(BuffType::DMG, 1 + faith, 6);
+	else if (character == Character::WARRIOR && faith == 0 && chance(1, 5))
+		giveBuff(BuffType::PROT, 1, 10);
 	if (armor != nullptr)
 		if (armor->durability <= 0)
 			armor->onRemove(this);

@@ -73,7 +73,7 @@ int main() {
 		switch (choice)
 		{
 		case 0:
-			res = startGame();
+			res = selectNewGame();
 			break;
 		case 1:
 			res = chooseSave();
@@ -101,6 +101,72 @@ int main() {
 	return 2;
 }
 
+int selectNewGame() {
+	std::vector<std::shared_ptr<MenuItem>> items = {};
+	std::vector<std::shared_ptr<MenuItem>> texts = {};
+	std::vector<std::wstring> characters = { L"Class: Warrior", L"Class: Mage", L"Class: Rogue" };
+	Character character = Character::WARRIOR;
+
+	seed = -1;
+
+	texts.push_back(createMenuItem(L"Console RPG ", BRIGHT_CYAN));
+	items.push_back(createMenuItem(L"Play", BRIGHT_GREEN));
+	items.push_back(createMenuItem(characters, CYAN));
+	items.push_back(createMenuItem(L"Seed: Random", YELLOW));
+	items.push_back(createMenuItem(L"Back", WHITE));
+
+	Menu menu(items, texts, true);
+
+	bool play = false;
+
+	while (!play) {
+		int choice = menu.open();
+		switch (choice)
+		{
+		case 0:
+			play = true;
+			break;
+		case 1:
+			break;
+		case 2:
+			chooseSeed();
+			if(seed == -1) items[1]->texts[0] = L"Seed: Random";
+			else items[1]->texts[0] = L"Seed: " + std::to_wstring(seed);
+			break;
+		default:
+			return 1;
+		}
+	}
+
+	switch (items[1]->selected) {
+	case 1:
+		character = Character::MAGE;
+		break;
+	case 2:
+		character = Character::ROGUE;
+		break;
+	default:
+		character = Character::WARRIOR;
+	}
+
+	return startGame(false, -1, character);
+}
+
+void chooseSeed() {
+	system("cls");
+	setCursor(2, 1);
+	std::wstring input;
+	std::wcout << "Input seed (Press [Enter] to input): ";
+	std::getline(std::wcin, input);
+	try {
+		seed = std::stoi(input);
+	}
+	catch (...) {
+		seed = -1;
+		return;
+	}
+	return;
+}
 
 int extractSaveNum(std::wstring save) {
 	std::wregex saveRegex(L"save(\\d+)");
@@ -202,7 +268,7 @@ int chooseSave() {
 		if (choice == -1 || choice == saves.size())
 			return 1;
 
-		res = manageSaveFile(items[choice]->text);
+		res = manageSaveFile(items[choice]->texts[0]);
 
 		if (res == 2) {
 			removeDirectory(L"./saves/" + saves[choice]);
@@ -217,16 +283,21 @@ int chooseSave() {
 }
 
 
-int startGame(bool load, int saveNum) {
+int startGame(bool load, int saveNum, Character character) {
 	std::wstring curSavePath = L"./saves/save" + std::to_wstring(saveNum) + L"/";
 	isRunning = true;
 	bool isOnCurrentBoard = true;
+	// Is player performing some board selectable action
+	bool isUsing = false;
+	// Which item is player using for board selectable action
+	std::shared_ptr<Item> usedItem = nullptr;
 
+	// TODO: More sound capabilities, with a mixer, cross-platform
 #if defined(_WIN32) || defined(_WIN64)
 	PlaySound(L"./sounds/game1.wav", NULL, SND_FILENAME | SND_LOOP | SND_ASYNC);
 #endif
 
-	// Player Variables
+	// Player Set-Up
 	Player p;
 
 	registerAll();
@@ -234,8 +305,11 @@ int startGame(bool load, int saveNum) {
 
 	if (load)
 		seed = p.load(curSavePath + L"player.sav", iFactory);
-	else
+	else if(seed == -1)
 		seed = (unsigned int)(time(NULL));
+
+	if (!load && character != p.character)
+		p.character = character;
 
 	p.seed = seed;
 
@@ -245,7 +319,7 @@ int startGame(bool load, int saveNum) {
 	for (int i = 0; i < 32; i++)
 		boardSeeds[i] = rand() % UINT_MAX + 1;
 
-	// Board Variables
+	// Board Set-Up
 	std::vector<Board> boards;
 
 	if(load)
@@ -260,7 +334,6 @@ int startGame(bool load, int saveNum) {
 
 	while (isRunning) {
 		if (!load) {
-			seed = (unsigned int)time(NULL);
 			Board b(B_WIDTH, B_HEIGHT, p, false, boardSeeds[p.curFloor]);
 			boards.push_back(b);
 			boards[p.curFloor].boardInit();
@@ -269,7 +342,7 @@ int startGame(bool load, int saveNum) {
 
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.2.9\nBeggars!", YELLOW).c_str());
+			write(color(L"Version: 0.3.0\nClasses! Ranged Weapons!", YELLOW).c_str());
 
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
@@ -282,34 +355,46 @@ int startGame(bool load, int saveNum) {
 
 					// Esc
 					if (ch == 27) {
-						setWindow((int)B_WIDTH, (int)B_HEIGHT);
-						int res = drawEscMenu();
-						setWindow((int)B_WIDTH + M_WIDTH, (int)B_HEIGHT + M_HEIGHT);
-						if (res == 1) {
-							system("cls");
-							write(L"Saving...");
-							if (saveNum == -1) {
-								saveNum = findNextSaveDirectory(L"./saves/");
-								curSavePath = L"./saves/save" + std::to_wstring(saveNum) + L"/";
-								createDirectory(curSavePath);
+						if (!isUsing) {
+							setWindow((int)B_WIDTH, (int)B_HEIGHT);
+							int res = drawEscMenu();
+							setWindow((int)B_WIDTH + M_WIDTH, (int)B_HEIGHT + M_HEIGHT);
+							if (res == 1) {
+								system("cls");
+								write(L"Saving...");
+								if (saveNum == -1) {
+									saveNum = findNextSaveDirectory(L"./saves/");
+									curSavePath = L"./saves/save" + std::to_wstring(saveNum) + L"/";
+									createDirectory(curSavePath);
+								}
+								p.save(curSavePath + L"player.sav");
+								for (int i = 0; i < boards.size(); i++)
+									boards[i].save(curSavePath + L"board" + std::to_wstring(i) + L".sav");
 							}
-							p.save(curSavePath + L"player.sav");
-							for(int i = 0; i < boards.size(); i++)
-								boards[i].save(curSavePath + L"board" + std::to_wstring(i) + L".sav");
+							boards[p.curFloor].drawBoardFull();
+							if (res == 1) {
+								boards[p.curFloor].startInfo();
+								write(color(L"Game saved successfully as (Save %)", YELLOW).c_str(), saveNum);
+							}
+							if (res == 0)
+								return 1;
 						}
-						boards[p.curFloor].drawBoardFull();
-						if (res == 1) {
+						else {
 							boards[p.curFloor].startInfo();
-							write(color(L"Game saved successfully as (Save %)", YELLOW).c_str(), saveNum);
+							isUsing = false;
 						}
-						if (res == 0)
-							return 1;
 					}
 					else if (ch == 'I' || ch == 'i') {
 						setWindow((int)B_WIDTH, (int)B_HEIGHT);
-					    std::function<void()> info = p.showInventory();
+					    std::pair<std::function<void()>, std::shared_ptr<Item>> info = p.showInventory();
 						setWindow((int)B_WIDTH + M_WIDTH, (int)B_HEIGHT + M_HEIGHT);
-						boards[p.curFloor].drawBoardFull(info);
+						boards[p.curFloor].drawBoardFull(info.first);
+						if (info.second->name != L"") {
+							write(L" (Press [Enter] to choose selected and [Esc] to cancel)");
+							isUsing = true;
+							usedItem = info.second;
+							boards[p.curFloor].selectEnemy(ch, usedItem);
+						}
 					}
 					else if (ch == 'C' || ch == 'c') {
 						setWindow((int)B_WIDTH, (int)B_HEIGHT);
@@ -317,8 +402,13 @@ int startGame(bool load, int saveNum) {
 						setWindow((int)B_WIDTH + M_WIDTH, (int)B_HEIGHT + M_HEIGHT);
 						boards[p.curFloor].drawBoardFull();
 					}
-					else { 
-						int res = boards[p.curFloor].movePlayer(ch); 
+					else if (isUsing) {
+						int res = boards[p.curFloor].selectEnemy(ch, usedItem);
+						if (res == 1)
+							isUsing = false;
+					}
+					else {
+						int res = boards[p.curFloor].movePlayer(ch);
 						if (res == 1) {
 							p.curFloor++;
 							isOnCurrentBoard = false;
@@ -332,6 +422,8 @@ int startGame(bool load, int saveNum) {
 
 					wait = false;
 				}
+				if(!isUsing)
+					std::wcout << L"\033[?25l";
 			}
 		}
 		isOnCurrentBoard = true;
@@ -403,19 +495,19 @@ bool drawDeadMenu() {
 void infoMenu(bool isMenu) {
 	std::vector<std::shared_ptr<MenuItem>> texts;
 
-	texts.push_back(createMenuItem(L" Controls", WHITE));
+	texts.push_back(createMenuItem(L"Controls ", WHITE));
 	texts.push_back(createMenuItem(L"W / Up Arrow - Up", WHITE));
 	texts.push_back(createMenuItem(L"S / Down Arrow - Down", WHITE));
 	texts.push_back(createMenuItem(L"A / Left Arrow - Left", WHITE));
 	texts.push_back(createMenuItem(L"D / Right Arrow - Right", WHITE));
 	texts.push_back(createMenuItem(L"I - Inventory", WHITE));
-	texts.push_back(createMenuItem(L"C - Crafting", WHITE));
+	texts.push_back(createMenuItem(L"C - Crafting ", WHITE));
 	texts.push_back(createMenuItem(L"Esc - Back / Open Escape Menu", WHITE));
 
 	if (!isMenu) {
 		texts.push_back(createMenuItem(L" ", WHITE));
-		texts.push_back(createMenuItem(L"Stats", WHITE));
-		std::wstring seedStr = L" Seed: " + std::to_wstring(seed);
+		texts.push_back(createMenuItem(L"Stats ", WHITE));
+		std::wstring seedStr = L" Seed: " + std::to_wstring(seed) + L" ";
 		texts.push_back(createMenuItem(seedStr, YELLOW));
 	}
 

@@ -12,10 +12,10 @@ class Player;
 class Item;
 
 enum class BuffType {
-    DMG = 0,  // Damage / Weakness
-    SPD = 1,  // Speed / Slowness
+    DMG = 0,   // Damage / Weakness
+    SPD = 1,   // Speed / Slowness
     PROT = 2,  // Porotection / Vulnerability
-    REG = 3,  // Regeneration / Poison
+    REG = 3,   // Regeneration / Poison
 };
 
 class Buff {

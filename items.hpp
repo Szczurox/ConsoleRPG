@@ -23,6 +23,8 @@ enum class ItemType {
 	USABLE = 3
 };
 
+std::wstring getDurString(int dur, int maxDur);
+
 class ItemFactory {
 public:
 	std::map<std::string, std::function<std::shared_ptr<Item>()>> itemMap;
@@ -54,7 +56,7 @@ public:
 	int minDmg = 0;
 	int maxDmg = 0;
 	int prot = 0;
-	int speed = 1;
+	int speed = 0;
 	int reqLevel = 0;
 	int durability = 0;
 	int maxDurability = 0;
@@ -120,6 +122,18 @@ public:
     std::pair<int, std::function<void()>> itemMenu(Player* p);
 };
 
+// Ranged class
+class Ranged : public Item {
+public:
+	Ranged() {};
+
+	int used(Player* player);
+	void onRemove(Player* p);
+	void writeMessage() {};
+	std::pair<int, std::function<void()>> itemMenu(Player* p);
+};
+
+
 // Resource class
 class Resource : public Item {
 public:
@@ -148,7 +162,7 @@ public:
 		symbol = L"┼";
 		minDmg = 3;
 		maxDmg = 5;
-		speed = 1;
+		speed = 0;
 		reqLevel = 0;
 		durability = dur;
 		maxDurability = 100;
@@ -165,7 +179,7 @@ public:
 		symbol = L"┼";
 		minDmg = 0;
 		maxDmg = 8;
-		speed = 2;
+		speed = 1;
 		reqLevel = 2;
 		durability = dur;
 		maxDurability = 250;
@@ -307,6 +321,42 @@ public:
 	}
 
 	virtual int used(Player* p);
+
+	virtual void writeMessage();
+};
+
+// Ranged
+class WandOfLightning : public Ranged {
+public:
+	WandOfLightning(int dur = 80) {
+		name = L"Wand of Lightning";
+		lore = L"Zap your enemies";
+		colord = YELLOW;
+		symbol = L"/";
+		stackable = false;
+		cost = 3000;
+		durability = dur;
+		maxDurability = 80;
+		maxDmg = 6;
+		minDmg = 4;
+	}
+
+	virtual void writeMessage();
+};
+
+class Shuriken : public Ranged {
+public:
+	Shuriken(int cnt = 1) {
+		name = L"Shuriken";
+		lore = L"Not easy to master";
+		colord = GREY;
+		symbol = L"•";
+		stackable = true;
+		cost = 20;
+		count = cnt;
+		maxDmg = 8;
+		minDmg = 0;
+	}
 
 	virtual void writeMessage();
 };

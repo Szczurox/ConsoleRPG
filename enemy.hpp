@@ -38,7 +38,7 @@ public:
 	Enemy() {}
 	Enemy(int x, int y, int roomNum) : x(x), y(y), roomNum(roomNum) {}
 
-	// Calculate damage enemy taken
+	// Calculate damage enemy has taken
 	int hit(int dmg);
 
 	// Calculate enemy damage
@@ -63,7 +63,7 @@ public:
 
 	virtual std::vector<std::shared_ptr<Item>> getLoot();
 	// Handle fight
-	std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> attacked(Player* p, bool first = false);
+	std::tuple<std::array<int, 5>, std::pair<std::wstring, unsigned char>> attacked(Player* p, bool first = false);
 	// Class name of the enemy
 	virtual std::string getType() const;
 

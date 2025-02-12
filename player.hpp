@@ -19,6 +19,31 @@ class MenuItem;
 class Menu;
 enum class BuffType;
 
+enum class Character {
+	// Warrior
+	// Starts with 110 max health
+	// 20% chance for a buff (DMG if negative faith / REG if positive faith / PROT if neutral) upon taking damage
+	// Starts with: Gambeson (100/200), Wooden Sword (50/100)
+	WARRIOR = 0,
+	// Mage
+	// Faith +1
+	// Starts with 90 max health
+	// 50% chance to not lose durability on wand use
+	// Bonus wand damage based on level
+	// Starts with: Wand of Lightning, 2 Health Potions
+	MAGE = 1, 
+	// Rogue
+	// Faith -1
+	// Speed +1
+	// Starts on level 2
+	// Starts with 80 max health
+	// 25% chance to not lose a throwable item on throw
+	// 10% chance to spawn an additional gold pile after killing an enemy
+	// Higher accuracy (minimum damage) on throwable items
+	// Starts with Iron Shortsword (50/250), 25 Shurikens 
+	ROGUE = 2
+};
+
 class Player {
 public:
 	std::map<std::wstring, std::shared_ptr<Item>> inv;
@@ -26,6 +51,7 @@ public:
 	std::vector<std::shared_ptr<Buff>> buffs;
 	std::shared_ptr<Item> weapon = nullptr;
 	std::shared_ptr<Item> armor = nullptr;
+	Character character = Character::WARRIOR;
 	unsigned int seed = 0;
 	static const int maxInvSpace = 32;
 	int curInvTaken = 0;
@@ -38,6 +64,7 @@ public:
 	int defence = 0;
 	int buffDefence = 0;
 	int baseSpeed = 1;
+	int speed = 1;
 	int buffSpeed = 0;
 	int gold = 0;
 	int xp = 0;
@@ -66,7 +93,7 @@ public:
 		recipes[type] = recipe;
 	};
 
-	void addItem(std::shared_ptr<Item> item, bool isLoading = false);
+	void addItem(std::shared_ptr<Item> item);
 
 	int removeItem(std::wstring name, int count, int ID = 0);
 
@@ -81,7 +108,7 @@ public:
 	void removeElement(int idx, std::vector<std::shared_ptr<MenuItem>>& it, std::vector<std::shared_ptr<Item>>& tIt, Menu& inv);
 
 	// I - show inventory
-	std::function<void()> showInventory();
+	std::pair<std::function<void()>, std::shared_ptr<Item>> showInventory();
 
 	// C - show recipes
 	void showCrafting();

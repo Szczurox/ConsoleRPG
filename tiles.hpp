@@ -33,12 +33,12 @@ enum class TileType {
 };
 
 struct InteractionResult {
-	std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> enemy = { {0, 0, 0, 0, 0}, {}, {L"", 0} };
+	std::tuple<std::array<int, 5>, std::pair<std::wstring, unsigned char>> enemy = { {0, 0, 0, 0, 0}, {L"", 0} };
 	std::function<void()> soldInfo = nullptr;
 	int result = 0;
 
 	InteractionResult(std::function<void()> info) : soldInfo(info), result(1) {};
-	InteractionResult(std::tuple<std::array<int, 5>, std::vector<std::shared_ptr<Item>>, std::pair<std::wstring, unsigned char>> enemy) : enemy(enemy) {};
+	InteractionResult(std::tuple<std::array<int, 5>, std::pair<std::wstring, unsigned char>> enemy) : enemy(enemy) {};
 	InteractionResult(int result) : result(result) {};
 };
 

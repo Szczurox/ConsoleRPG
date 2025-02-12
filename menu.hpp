@@ -8,17 +8,25 @@
 
 class MenuItem {
 public:
-	std::wstring text;
+	std::vector<std::wstring> texts = {};
 	unsigned char color = WHITE;
 	int colorsCount = 0;
-	MenuItem(std::wstring text, unsigned char color) : text(text), color(color) {};
-	MenuItem(int howManyColors, std::wstring text) : text(text), color(0), colorsCount(howManyColors) {};
-	MenuItem(): text(L"") {};
+	int selected = 0;
+	bool isSelectable = false;
+	MenuItem(std::wstring text, unsigned char color) : texts({ text }), color(color) {};
+	MenuItem(std::vector<std::wstring> texts, unsigned char color) : texts(texts), color(color), isSelectable(true) {};
+	MenuItem(int howManyColors, std::wstring text) : texts({ text }), colorsCount(howManyColors), color(0) {};
+	MenuItem(int howManyColors, std::vector<std::wstring> texts) : texts(texts), colorsCount(howManyColors), isSelectable(true), color(0) {};
+	MenuItem(): texts({ L"" }) {};
 };
 
 std::shared_ptr<MenuItem> createMenuItem(std::wstring text, unsigned char color);
 
 std::shared_ptr<MenuItem> createMenuItem(int colorNum, std::wstring text);
+
+std::shared_ptr<MenuItem> createMenuItem(std::vector<std::wstring> texts, unsigned char color);
+
+std::shared_ptr<MenuItem> createMenuItem(int colorNum, std::vector<std::wstring> texts);
 
 class Menu {
 public:

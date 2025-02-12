@@ -5,11 +5,14 @@
 
 #include"const.hpp"
 
-enum Direction {
+enum MoveType {
 	UP = 0,
 	DOWN = 1,
 	LEFT = 2,
-	RIGHT = 3
+	RIGHT = 3,
+	ENTER = 4,
+	WAIT = 5,
+	OTHER = 6,
 };
 
 void writeColor(const wchar_t* text, unsigned char color = WHITE);

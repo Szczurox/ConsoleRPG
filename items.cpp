@@ -46,17 +46,11 @@ std::string Item::getType() const {
 }
 
 void Item::save(std::ostream& os) {
-    os << getType() << " " << ID << " " << count << " " << durability << "\n";
+    os << getType() << " " << count << " " << durability << "\n";
 }
 
 void Item::load(std::istringstream& in) {
-    int temp;
-    if (!stackable)
-        in >> ID >> count >> durability;
-    else {
-        in >> temp;
-        in >> count >> durability;
-    }
+    in >> count >> durability;
 }
 
 int Weapon::used(Player* player) {
@@ -81,21 +75,24 @@ void Weapon::onRemove(Player* p) {
     p->removeItem(name, 1, ID);
 }
 
+std::wstring getDurString(int durability, int maxDurability) {
+    char durColor = RED;
+    if (durability * 100 / maxDurability > 30)
+        durColor = YELLOW;
+    if (durability * 100 / maxDurability > 60)
+        durColor = GREEN;
+    return color(L"Durability: ", BRIGHT_BLUE).c_str() + color(std::to_wstring(durability) + L"/" + std::to_wstring(maxDurability), durColor) + L" ";
+}
+
 std::pair<int, std::function<void()>> Weapon::itemMenu(Player* p) {
     std::vector<std::shared_ptr<MenuItem>> options;
 
     std::shared_ptr<MenuItem> nameI = createMenuItem(name, colord);
     std::shared_ptr<MenuItem> loreI = createMenuItem(lore, WHITE);
     std::wstringstream s;
-    s << L"Deals " << minDmg << L"-" << maxDmg << L" damage and has " << speed << L"speed";
+    s << L"Deals " << minDmg << L"-" << maxDmg << L" damage and has " << speed << L" speed";
     std::shared_ptr<MenuItem> damage = createMenuItem(s.str(), YELLOW);
-    char durColor = RED;
-    if (durability * 100 / maxDurability > 30)
-        durColor = YELLOW;
-    if (durability * 100 / maxDurability > 60)
-        durColor = GREEN;
-    std::wstring d = color(L"Durability: ", BRIGHT_BLUE).c_str() + color(std::to_wstring(durability) + L"/" + std::to_wstring(maxDurability));
-    std::shared_ptr<MenuItem> dur = createMenuItem(2, d);
+    std::shared_ptr<MenuItem> dur = createMenuItem(2, getDurString(durability, maxDurability));
     std::vector<std::shared_ptr<MenuItem>> texts({ nameI, loreI, damage, dur });
 
     if (p->level < reqLevel) {
@@ -144,13 +141,7 @@ std::pair<int, std::function<void()>> Armor::itemMenu(Player* p) {
     std::wstringstream s;
     s << L"Gives you " << prot << " defence";
     std::shared_ptr<MenuItem> prot = createMenuItem(s.str(), YELLOW);
-    char durColor = RED;
-    if (durability * 100 / maxDurability >= 30)
-        durColor = YELLOW;
-    if (durability * 100 / maxDurability >= 70)
-        durColor = GREEN;
-    std::wstring d = color(L"Durability: ", BRIGHT_BLUE).c_str() + color(std::to_wstring(durability) + L"/" + std::to_wstring(maxDurability));
-    std::shared_ptr<MenuItem> dur = createMenuItem(2, d);
+    std::shared_ptr<MenuItem> dur = createMenuItem(2, getDurString(durability, maxDurability));
     std::vector<std::shared_ptr<MenuItem>> texts({ nameI, loreI, prot, dur });
     if (p->level < reqLevel) {
         std::wstringstream e;
@@ -187,15 +178,49 @@ void Usable::writeMessage() {
 std::pair<int, std::function<void()>> Usable::itemMenu(Player* p) {
     std::shared_ptr<MenuItem> nameI = createMenuItem(name.c_str(), colord);
     std::shared_ptr<MenuItem> loreI = createMenuItem(lore.c_str(), WHITE);
-    std::wstringstream d;
-    d << L"Amount: " << count;
-    std::shared_ptr<MenuItem> coun = createMenuItem(d.str(), BRIGHT_BLUE);
+    std::shared_ptr<MenuItem> coun = createMenuItem(L"Amount: " + std::to_wstring(count), BRIGHT_BLUE);
     std::vector<std::shared_ptr<MenuItem>> texts({ nameI, loreI, coun });
 
     std::shared_ptr<MenuItem> use = createMenuItem(L"Use", BRIGHT_GREEN);
     std::shared_ptr<MenuItem> remove = createMenuItem(L"Destroy", RED);
     std::shared_ptr<MenuItem> back = createMenuItem(L"Back", WHITE);
     std::vector<std::shared_ptr<MenuItem>> options({ use, remove, back });
+
+    return menuHandle(p, options, texts);
+}
+
+int Ranged::used(Player* player) {
+    return 6;
+}
+
+void Ranged::onRemove(Player* p) {
+    p->removeItem(name, count);
+}
+
+std::pair<int, std::function<void()>> Ranged::itemMenu(Player* p) {
+    std::vector<std::shared_ptr<MenuItem>> options;
+
+    std::shared_ptr<MenuItem> nameI = createMenuItem(name, colord);
+    std::shared_ptr<MenuItem> loreI = createMenuItem(lore, WHITE);
+    std::wstringstream s;
+    s << L"Deals " << minDmg << L"-" << maxDmg << L" damage";
+    std::shared_ptr<MenuItem> damage = createMenuItem(s.str(), YELLOW);  
+    std::shared_ptr<MenuItem> durCoun;
+    if(!stackable)
+        durCoun = createMenuItem(2, getDurString(durability, maxDurability));
+    else 
+        durCoun = createMenuItem(L"Amount: " + std::to_wstring(count), BRIGHT_BLUE);
+    std::vector<std::shared_ptr<MenuItem>> texts({ nameI, loreI, damage, durCoun });
+
+    if (p->level < reqLevel) {
+        std::wstringstream e;
+        e << L"Required Level: " << reqLevel;
+        texts.push_back(createMenuItem(e.str(), RED));
+    }
+
+    options.push_back(createMenuItem(L"Use", BRIGHT_GREEN));
+    options.push_back(createMenuItem(L"Destroy", RED));
+    options.push_back(createMenuItem(L"Back", WHITE));
 
     return menuHandle(p, options, texts);
 }
@@ -211,9 +236,7 @@ void Resource::onRemove(Player* p) {
 std::pair<int, std::function<void()>> Resource::itemMenu(Player* p) {
     std::shared_ptr<MenuItem> nameI = createMenuItem(name, colord);
     std::shared_ptr<MenuItem> loreI = createMenuItem(lore, WHITE);
-    std::wstringstream d;
-    d << L"Amount: " << count;
-    std::shared_ptr<MenuItem> coun = createMenuItem(d.str(), BRIGHT_BLUE);
+    std::shared_ptr<MenuItem> coun = createMenuItem(L"Amount: " + std::to_wstring(count), BRIGHT_BLUE);
     std::vector<std::shared_ptr<MenuItem>> texts({ nameI, loreI, coun });
 
     std::shared_ptr<MenuItem> remove = createMenuItem(L"Destroy", RED);
@@ -360,4 +383,12 @@ void SacramentalBread::writeMessage() {
         write(L"You ate %.\n%", color(name.c_str(), colord).c_str(), color(L"It hurts...", RED).c_str());
     else
         write(L"%%", color(L"You feel refreshed... ", colord).c_str(), color(L"but not protected.", RED).c_str());
+}
+
+void WandOfLightning::writeMessage() {
+    write(color(L"Select an enemy to zap", colord).c_str());
+}
+
+void Shuriken::writeMessage() {
+    write(color(L"Select an enemy to throw Shuriken at", colord).c_str());
 }

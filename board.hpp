@@ -45,6 +45,8 @@ public:
 	// Update board on player action
 	int movePlayer(char ch);
 
+	int selectEnemy(char ch, std::shared_ptr<Item> it = nullptr);
+
 	// Enemies move AI
 	void moveEnemies(std::shared_ptr<Enemy> fought = nullptr);
 
@@ -56,8 +58,11 @@ private:
 	int width;
 	int height;
 	int boxSize = 44;
+	int boardSelected = 0;
 	bool moveDone = true;
 	Player& p;
+
+	int getMove(char ch);
 
 	void drawTile(int  x, int y);
 
