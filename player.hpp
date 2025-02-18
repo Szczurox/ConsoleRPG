@@ -20,18 +20,20 @@ class Menu;
 enum class BuffType;
 
 enum class Character {
+	WARRIOR = 0,
 	// Warrior
+	// 2 base damage
 	// 110 max health
 	// 20% chance for a buff (DMG if negative faith / REG if positive faith / PROT if neutral) upon taking damage
 	// Starts with: Gambeson (150/200), Wooden Sword (75/100)
-	WARRIOR = 0,
+	MAGE = 1, 
 	// Mage
 	// Faith +1
 	// 80 max health
 	// 50% chance to not lose durability on wand use
 	// Bonus wand damage based on level
 	// Starts with: Wand of Lightning, Mage Robes (grants +10% exp boost)
-	MAGE = 1, 
+	ROGUE = 2,
 	// Rogue
 	// Faith -1
 	// Speed +1
@@ -41,7 +43,16 @@ enum class Character {
 	// 10% chance to spawn an additional gold pile after killing an enemy
 	// Higher accuracy (minimum damage) on throwable items
 	// Starts with: Iron Shortsword (50/250), 25 Shurikens 
-	ROGUE = 2
+	CULTIST = 3
+	// Cultist
+	// Faith -6
+	// Speed -1
+	// Starts on level 3
+	// 0 base damage
+	// 66 max health
+	// Grants REG 1-3 for 1-66 turns upon killing an enemy
+	// Starts with: Ceremonial Robes (16% chance to give 1-(exp needed for next level) exp upon taking damage), Bloody Blade (gives REG 1 for 1-3 turns after each attack)
+	// Has 33% chance to lose 1HP each turn
 };
 
 class Player {
@@ -95,7 +106,7 @@ public:
 
 	void addItem(std::shared_ptr<Item> item, bool loading = false);
 
-	int removeItem(std::wstring name, int count, int ID = 0);
+	int removeItem(std::wstring name, int count, int ID = 0, bool erase = false);
 
 	// Create char array for equipable item for inventory menu
 	int itemChar(std::wstring& s, std::shared_ptr<Item> item, bool selected = false);

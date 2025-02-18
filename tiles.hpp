@@ -17,6 +17,15 @@ class EnemyFactory;
 class NPCFactory;
 class SoldInfo;
 
+enum class RoomType {
+	ENTRANCE = 0,
+	BASIC = 1,
+	STAIR = 2,
+	SECRET = 3,
+	LOCKED = 4,
+	BOSS = 5,
+};
+
 // Tiles
 enum class TileType {
 	EMPTY = 0,
@@ -30,6 +39,8 @@ enum class TileType {
 	STAIRS = 8,
 	NPC = 9,
 	SECRET_DOOR = 10,
+	LOCKED_DOOR = 11,
+	BOSS_DOOR = 12,
 };
 
 struct InteractionResult {
@@ -52,11 +63,21 @@ public:
 	bool isVisible = true;
 
 	Tile(int roomNum) : roomNum(roomNum) {}
-	Tile(TileType type, int roomNum, bool isVisible = true) : type(type), isVisible(isVisible), roomNum(roomNum) {}
-	Tile(std::shared_ptr<Item> item, int roomNum, bool isVisible = true) : type(TileType::ITEM), item(item), isVisible(isVisible), roomNum(roomNum) {}
-	Tile(std::shared_ptr<Enemy> enemy, int roomNum, bool isVisible = true) : type(TileType::ENEM), enemy(enemy), isVisible(isVisible), roomNum(roomNum) {}
-	Tile(std::shared_ptr<NPC> npc, int roomNum, bool isVisible = true) : type(TileType::NPC), npc(npc), isVisible(isVisible), roomNum(roomNum) {}
-	Tile(bool isDoor, int roomNum, int room, bool isVisible = true, bool isSecret = false) : type(!isSecret ? TileType::DOOR : TileType::SECRET_DOOR), roomNum(roomNum), isVisible(isVisible) {}
+	Tile(TileType type, int roomNum, bool isVisible = false) : type(type), isVisible(isVisible), roomNum(roomNum) {}
+	Tile(std::shared_ptr<Item> item, int roomNum, bool isVisible = false) : type(TileType::ITEM), item(item), isVisible(isVisible), roomNum(roomNum) {}
+	Tile(std::shared_ptr<Enemy> enemy, int roomNum, bool isVisible = false) : type(TileType::ENEM), enemy(enemy), isVisible(isVisible), roomNum(roomNum) {}
+	Tile(std::shared_ptr<NPC> npc, int roomNum, bool isVisible = false) : type(TileType::NPC), npc(npc), isVisible(isVisible), roomNum(roomNum) {}
+	// Door (provide room type)
+	Tile(int roomNum, RoomType rType, bool isVisible = false) : roomNum(roomNum), isVisible(isVisible) {
+		if (rType == RoomType::SECRET)
+			type = TileType::SECRET_DOOR;
+		else if (rType == RoomType::LOCKED)
+			type = TileType::LOCKED_DOOR;
+		else if (rType == RoomType::BOSS)
+			type = TileType::BOSS_DOOR;
+		else
+			type = TileType::DOOR;
+	}
 
 	void draw(Player* p);
 
@@ -74,13 +95,6 @@ public:
 
 
 // Rooms
-enum class RoomType {
-	ENTRANCE = 0,
-	BASIC = 1,
-	TREASURE = 2,
-	STAIR = 3,
-	SECRET = 4,
-};
 
 class Room {
 public:
@@ -97,6 +111,7 @@ public:
 	int floor = 1;
 	// Room number
 	int num = 0;
+	int spawnKey = -1;
 	Room() {}
 	Room(int num, int x, int y, int width, int height, int bufferX) : num(num), x(x), y(y), width(width), height(height), bufferX(bufferX) {}
 	
@@ -109,7 +124,7 @@ public:
 		bufferX = buffX;
 	}
 	
-	void genDoor(int d, bool isSecret = false);
+	void genDoor(int d, RoomType type = RoomType::BASIC);
 
 	virtual std::vector<Tile> summonEntities() {
 		return std::vector<Tile>();
@@ -171,11 +186,10 @@ public:
 	virtual std::vector<Tile> summonEntities();
 };
 
-
-class Tresury : public Room {
+class LockedRoom : public Room {
 public:
-	Tresury() {
-		type = RoomType::TREASURE;
+	LockedRoom() {
+		type = RoomType::LOCKED;
 	}
 
 	virtual std::vector<Tile> summonEntities();

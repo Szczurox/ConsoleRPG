@@ -10,6 +10,8 @@
 void Buff::tick(Player* player) {
     if (type == BuffType::REG)
         player->health += isNegative ? -amount : amount;
+    if (player->health > player->maxHealth)
+        player->health = player->maxHealth;
     duration--;
 }
 

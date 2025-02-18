@@ -187,6 +187,25 @@ public:
 	}
 };
 
+class BloodyBlade : public Weapon {
+public:
+	BloodyBlade(int dur = 666) {
+		name = L"Bloody Blade";
+		lore = L"Damage comes at a cost";
+		colord = RED;
+		symbol = L"┼";
+		minDmg = 0;
+		maxDmg = 6;
+		speed = 6;
+		reqLevel = 3;
+		durability = dur;
+		maxDurability = 666;
+		cost = 6000;
+	}
+
+	virtual void special(Player* player, int dmg);
+};
+
 // Armor
 class Gambeson : public Armor {
 public:
@@ -205,7 +224,7 @@ public:
 
 class BoneArmor : public Armor {
 public:
-	BoneArmor(int dur = 100) {
+	BoneArmor(int dur = 125) {
 		name = L"Bone Armor";
 		lore = L"Armor made out of bones";
 		colord = GREY;
@@ -213,7 +232,7 @@ public:
 		prot = 3;
 		reqLevel = 0;
 		durability = dur;
-		maxDurability = 100;
+		maxDurability = 125;
 		cost = 1000;
 	}
 };
@@ -361,6 +380,25 @@ public:
 	virtual void writeMessage();
 };
 
+class VampiricWand : public Ranged {
+public:
+	VampiricWand(int dur = 100) {
+		name = L" Vampiric Wand";
+		lore = L"Steal your enemies' blood";
+		colord = RED;
+		symbol = L"/";
+		stackable = false;
+		cost = 10000;
+		durability = dur;
+		maxDurability = 66;
+		maxDmg = 8;
+		minDmg = 6;
+	}
+
+	virtual void writeMessage();
+	virtual void special(Player* player, int dmg);
+};
+
 class Shuriken : public Ranged {
 public:
 	Shuriken(int cnt = 1) {
@@ -378,6 +416,23 @@ public:
 	virtual void writeMessage();
 };
 
+class Dart : public Ranged {
+public:
+	Dart(int cnt = 1) {
+		name = L"Dart";
+		lore = L"Very accurate but not so powerful";
+		colord = GREY;
+		symbol = L"·";
+		stackable = true;
+		cost = 10;
+		count = cnt;
+		maxDmg = 3;
+		minDmg = 3;
+	}
+
+	virtual void writeMessage();
+};
+
 // Resources
 class Bone : public Resource {
 public:
@@ -388,6 +443,22 @@ public:
 		symbol = L"/";
 		cost = 100;
 		count = cnt;
+	}
+};
+
+class Key : public Resource {
+public:
+	Key(int floor = 0, int room = 0) {
+		stackable = false;
+		name = L"Key";
+		lore = L"Found on the floor " + std::to_wstring(floor);
+		colord = GREY;
+		symbol = L"⌐";
+		ID = room;
+		// Using count to store floor
+		count = floor;
+		maxDurability = 1;
+		durability = 1;
 	}
 };
 

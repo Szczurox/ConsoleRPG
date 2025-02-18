@@ -27,14 +27,14 @@ void Player::save(std::wstring fileName) {
 	playerSave << "EndBuff\n";
 	playerSave << seed << " " << static_cast<int>(character) << " " << health << " " << maxHealth << " " << baseDamage << " " << defence << " ";
 	playerSave << baseSpeed << " " << gold << " " << xp << " " << expForNext << " " << level << " ";
-	playerSave << curRoomNum << " " << curFloor << " " << curItemID << " " << x << " " << y << " " << faith;
+	playerSave << curRoomNum << " " << curFloor << " " << curItemID << " " << x << " " << y << " " << faith << "\n";
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 	if (weapon != nullptr)
-		playerSave << converter.to_bytes(weapon->name) << weapon->ID << "\n";
+		playerSave << "1" << converter.to_bytes(weapon->name) << weapon->ID << "\n";
 	else
 		playerSave << "null\n";
 	if (armor != nullptr)
-		playerSave << converter.to_bytes(armor->name) << armor->ID << "\n";
+		playerSave << "1" << converter.to_bytes(armor->name) << armor->ID << "\n";
 	else
 		playerSave << "null\n";
 }
@@ -72,6 +72,7 @@ unsigned int Player::load(std::wstring fileName, ItemFactory& factory) {
 	std::string weaponStr = "";
 	std::string armorStr = "";
 	std::getline(file, weaponStr);
+	std::getline(file, weaponStr);
 	std::getline(file, armorStr);
 	std::wstring weaponStrW = converter.from_bytes(weaponStr);
 	std::wstring armorStrW = converter.from_bytes(armorStr);
@@ -96,25 +97,28 @@ void Player::addItem(std::shared_ptr<Item> item, bool loading) {
 			inv[item->name]->count += item->count;
 	}
 	else {
-		if (!loading) {
+		if (item->ID == 0) {
 			curItemID++;
 			item->ID = curItemID;
 		}
-		std::wstring s = item->name + std::to_wstring(item->ID);
+		// Count is used as additional ID
+		std::wstring s = std::to_wstring(item->count) + item->name + std::to_wstring(item->ID);
 		inv.insert({ s, item });
 		curInvTaken++;
 	}
 };
 
-int Player::removeItem(std::wstring name, int count, int ID) {
+int Player::removeItem(std::wstring name, int count, int ID, bool erase) {
 	std::wstring realName;
 	if (ID == 0)
 		realName = name;
 	else
-		realName = name + std::to_wstring(ID);
+		realName = std::to_wstring(count) + name + std::to_wstring(ID);
 
 	if (inv.find(realName) != inv.end()) {
 		inv[realName]->count -= count;
+		if (erase)
+			inv.erase(realName);
 		return 0;
 	}
 	else
@@ -340,12 +344,12 @@ int Player::hit(int dmg) {
 int Player::attack() {
 	if (attackedThisTurn)
 		return 0;
+	int dmg = randMinMax(minDamage, maxDamage);
 	if (weapon != nullptr) {
 		weapon->durability--;
-		weapon->special(this, 0);
+		weapon->special(this, dmg);
 		checkBuffs(false);
 	}
-	int dmg = randMinMax(minDamage, maxDamage);
 	if (weapon != nullptr)
 		if (weapon->durability <= 0)
 			weapon->onRemove(this);

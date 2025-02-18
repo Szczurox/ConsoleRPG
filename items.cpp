@@ -50,13 +50,7 @@ void Item::save(std::ostream& os) {
 }
 
 void Item::load(std::istringstream& in) {
-    int temp;
-    if (!stackable)
-        in >> ID >> count >> durability;
-    else {
-        in >> temp;
-        in >> count >> durability;
-    }
+    in >> ID >> count >> durability;
 }
 
 int Weapon::used(Player* player) {
@@ -236,7 +230,7 @@ int Resource::used(Player* player) {
 }
 
 void Resource::onRemove(Player* p) {
-    p->removeItem(name, count);
+    p->removeItem(name, count, ID);
 }
 
 std::pair<int, std::function<void()>> Resource::itemMenu(Player* p) {
@@ -266,6 +260,15 @@ int GoldPile::picked(Player* player) {
 }
 
 // Weapons
+void BloodyBlade::special(Player* p, int dmg) {
+    if (dmg / 3 < p->health - 10)
+        p->health -= dmg / 3;
+    else
+        p->giveBuff(BuffType::DMG, 1, 6, true);
+
+    if (p->character == Character::CULTIST)
+        p->giveBuff(BuffType::REG, 1, randMinMax(1, 3));
+}
 
 // Armor
 void MageRobes::special(Player* p, int dmg) {
@@ -282,6 +285,8 @@ void CeremonialRobes::special(Player* p, int dmg) {
         p->giveBuff(BuffType::DMG, 4, 1);
     else if (p->health < p->maxHealth / 2)
         p->giveBuff(BuffType::DMG, 2, 1);
+    if (p->character == Character::CULTIST && chance(1, 6))
+        p->giveExp(randMinMax(1, p->expForNext / 6));
 }
 
 void Chasuble::special(Player* p, int dmg) {
@@ -400,6 +405,23 @@ void WandOfLightning::writeMessage() {
     write(color(L"Select an enemy to zap", colord).c_str());
 }
 
+void VampiricWand::writeMessage() {
+    write(color(L"Select an enemy to steal life from", colord).c_str());
+}
+
+void VampiricWand::special(Player* p, int dmg) {
+    p->health += dmg;
+    if (p->health > p->maxHealth) p->health = p->maxHealth;
+    if (chance(1, 6))
+        p->giveBuff(BuffType::SPD, 1, 6);
+    if (chance(1, 6))
+        p->giveBuff(BuffType::PROT, 1, 6, false);
+}
+
 void Shuriken::writeMessage() {
     write(color(L"Select an enemy to throw Shuriken at", colord).c_str());
+}
+
+void Dart::writeMessage() {
+    write(color(L"Select an enemy to throw Dart at", colord).c_str());
 }

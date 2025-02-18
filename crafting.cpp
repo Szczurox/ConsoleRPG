@@ -84,7 +84,7 @@ BARecipe::BARecipe(bool unl) {
     unlocked = unl;
     item = std::shared_ptr<Item>(new BoneArmor());
     items = std::vector<std::shared_ptr<Item>>();
-    items.push_back(std::shared_ptr<Item>(new Bone(30)));
+    items.push_back(std::shared_ptr<Item>(new Bone(50)));
 }
 
 std::shared_ptr<Item> BARecipe::getItem() {

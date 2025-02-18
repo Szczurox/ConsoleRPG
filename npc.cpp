@@ -42,21 +42,26 @@ Shop::Shop(int floor) {
 	nameColor = YELLOW;
 	colord = YELLOW;
 
-	for (int i = 0; i < std::min(floor + 3, 12); i++) {
-		int rand = randMinMax(0, 1000);
-		if (rand > 950)
+	while (inv.size() < std::min(floor + 3, 12)) {
+		if (chance(1, 20))
 			inv.push_back(std::shared_ptr<Item>(new IronShortsword()));
-		if (rand > 850)
+		if (chance(1, 10))
 			inv.push_back(std::shared_ptr<Item>(new WoodenSword()));
-		else if (rand > 750)
+		if (chance(1, 10))
 			inv.push_back(std::shared_ptr<Item>(new Gambeson()));
-		else if (rand > 700)
+		if (chance(1, 15))
 			inv.push_back(std::shared_ptr<Item>(new WandOfLightning()));
-		else if (rand > 500)
+		if (chance(1, 5))
+			inv.push_back(std::shared_ptr<Item>(new Dart(25)));
+		if (chance(1, 5))
 			inv.push_back(std::shared_ptr<Item>(new Shuriken(25)));
-		else
+		if (chance(1, 3))
 			inv.push_back(std::shared_ptr<Item>(new HealthPotion()));
 	}
+
+	while (inv.size() > std::min(floor + 3, 12))
+		inv.pop_back();
+
 	inv.push_back(std::shared_ptr<Item>(new HealthPotion()));
 }
 
@@ -121,16 +126,23 @@ DemonShop::DemonShop(int floor) {
 	nameColor = RED;
 	colord = GREY;
 
-	for (int i = 0; i < std::min(floor + 1, 6); i++) {
-		int rand = randMinMax(0, 100);
-		if (rand > 900)
+	while (inv.size() < std::min(floor + 1, 6)) {
+		if (chance(1, 10))
+			inv.push_back(std::shared_ptr<Item>(new VampiricWand()));
+		if (chance(1, 6))
+			inv.push_back(std::shared_ptr<Item>(new CeremonialRobes()));
+		if (chance(1, 6))
+			inv.push_back(std::shared_ptr<Item>(new BloodyBlade()));
+		if (chance(1, 6))
 			inv.push_back(std::shared_ptr<Item>(new IronShortsword()));
-		else if (rand > 700)
-			inv.push_back(std::shared_ptr<Item>(new BoneArmor()));
-		else
+		if (chance(1, 3))
 			inv.push_back(std::shared_ptr<Item>(new BloodOath()));
+		if (chance(1, 3))
+			inv.push_back(std::shared_ptr<Item>(new BoneArmor()));
 	}
-	inv.push_back(std::shared_ptr<Item>(new HealthPotion()));
+
+	while (inv.size() > std::min(floor + 1, 6))
+		inv.pop_back();
 }
 
 void DemonShop::writeMessage(int choice, int res) {
@@ -288,7 +300,7 @@ void Smith::writeMessage(int choice, int res) {
 }
 
 std::function<void()> Smith::interacted(Player* p) {
-	int success = 100 - npcMemory * 2;
+	int success = 100 - npcMemory;
 
 	std::shared_ptr<MenuItem> nameMenu = createMenuItem(name, nameColor);
 	std::shared_ptr<MenuItem> message = createMenuItem(L"Howdy! Do you need a quick fix? (Success: " + std::to_wstring(success) + L"%)", WHITE);
@@ -326,7 +338,7 @@ std::function<void()> Smith::interacted(Player* p) {
 			inv.push_back(trueItems[choice]);
 			if (cost <= p->gold) {
 				p->gold -= cost;
-				npcMemory++;
+				npcMemory += 5;
 				if (chance(success, 100)) {
 					trueItems[choice]->durability = trueItems[choice]->maxDurability;
 					return [this]() {  writeMessage(0, 1); };

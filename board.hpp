@@ -62,6 +62,8 @@ private:
 	int curBottom = 0;
 	bool moveDone = true;
 	Player& p;
+	// Vector of all of the rooms on the current board
+	std::vector<std::shared_ptr<Room>> r;
 
 	int getMove(char ch);
 

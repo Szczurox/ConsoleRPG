@@ -69,6 +69,12 @@ void Tile::draw(Player* p) {
 		case TileType::DOOR:
 			writeColor(L"╫", GREY);
 			break;
+		case TileType::LOCKED_DOOR:
+			writeColor(L"║", GREY);
+			break;
+		case TileType::BOSS_DOOR:
+			writeColor(L"╫", RED);
+			break;
 		default:
 			break;
 		}
@@ -79,6 +85,10 @@ void Tile::draw(Player* p) {
 InteractionResult Tile::interacted(Player* p, int par) {
 	if (type == TileType::SECRET_DOOR)
 		type = TileType::DOOR;
+	if (type == TileType::LOCKED_DOOR)
+		type = TileType::DOOR;
+	if (type == TileType::BOSS_DOOR)
+		type = TileType::LOCKED_DOOR;
 	if (type == TileType::DOOR) {
 		if (par == 0)
 			p->curRoomNum = roomNum;
@@ -151,13 +161,12 @@ std::shared_ptr<Enemy> Tile::load(std::ifstream& in, ItemFactory& iFactory, Enem
 	return enemy;
 }
 
-void Room::genDoor(int d, bool isSecret) {
+void Room::genDoor(int d, RoomType type) {
 	if (d < 2)
 		doors[d] = x + rand() % (width - 2) + 1;
 	if (d > 1)
 		doors[d] = y + rand() % (height - 2) + 1;
-	if (isSecret)
-		neighboursType[d] = RoomType::SECRET;
+	neighboursType[d] = type;
 }
 
 // T - Enemy / Item, Args - Enemy / Item args
@@ -181,13 +190,13 @@ void Room::create(std::vector<std::vector<Tile>>& board, std::vector<std::shared
 		board[i][yH - 1] = Tile(TileType::WALL, num, false);
 	}
 	if (doors[0] != -1)
-		board[doors[0]][y] = Tile(true, num, neighbours[0], false, (neighboursType[0] == RoomType::SECRET || type == RoomType::SECRET));
+		board[doors[0]][y] = Tile(num, neighboursType[0] == RoomType::SECRET ? RoomType::SECRET : type);
 	if (doors[1] != -1)
-		board[doors[1]][yH - 1] = Tile(true, num, neighbours[1], false, (neighboursType[1] == RoomType::SECRET || type == RoomType::SECRET));
+		board[doors[1]][yH - 1] = Tile(num, neighboursType[1] == RoomType::SECRET ? RoomType::SECRET : type);
 	if (doors[2] != -1)
-		board[x][doors[2]] = Tile(true, num, neighbours[2], false, (neighboursType[2] == RoomType::SECRET || type == RoomType::SECRET));
+		board[x][doors[2]] = Tile(num, neighboursType[2] == RoomType::SECRET ? RoomType::SECRET : type);
 	if (doors[3] != -1)
-		board[xW - 1][doors[3]] = Tile(true, num, neighbours[3], false, (neighboursType[3] == RoomType::SECRET || type == RoomType::SECRET));
+		board[xW - 1][doors[3]] = Tile(num, neighboursType[3] == RoomType::SECRET ? RoomType::SECRET : type);
 
 	summonSetEntities(board);
 
@@ -205,7 +214,7 @@ void Room::create(std::vector<std::vector<Tile>>& board, std::vector<std::shared
 			for (int i = 0; i < 4; i++) {
 				int dX = randX + dx[i];
 				int dY = randY + dy[i];
-				if (board[dX][dY].type == TileType::DOOR || board[dX][dY].type == TileType::SECRET_DOOR)
+				if (board[dX][dY].type == TileType::DOOR || board[dX][dY].type == TileType::SECRET_DOOR || board[dX][dY].type == TileType::LOCKED_DOOR || board[dX][dY].type == TileType::BOSS_DOOR)
 					isNearDoor = true;
 			}
 			if (!isNearDoor && board[randX][randY].type == TileType::NOTHING) {
@@ -233,6 +242,7 @@ std::vector<Tile> BasicRoom::summonEntities() {
 	randEntity<HealthPotion>(e, 2, 1, 10);
 	randEntity<WoodenSword>(e, 1, 1, 20 * floor, randMinMax(1, 100));
 	randEntity<Gambeson>(e, 1, 1, 20 * floor, randMinMax(1, 100));
+	if (spawnKey != -1) randEntity<Key>(e, 1, 1, 1, floor, spawnKey);
 
 	// Enemies
 	if (floor < 2) {
@@ -285,12 +295,7 @@ std::vector<Tile> SecretRoom::summonEntities() {
 		randEntity<HealthPotion>(e, 3, 1, 3);
 	}
 	else if (roomType == 2) {
-		std::vector<std::shared_ptr<Item>> shop;
-		shop.push_back(std::shared_ptr<Item>(new CeremonialRobes()));
-		shop.push_back(std::shared_ptr<Item>(new BloodOath()));
-		shop.push_back(std::shared_ptr<Item>(new IronShortsword()));
-		shop.push_back(std::shared_ptr<Item>(new BoneArmor()));
-		randEntity<DemonShop>(e, 1, 1, 1, shop);
+		randEntity<DemonShop>(e, 1, 1, 1);
 		randEntity<IronShortsword>(e, 1, 1, 6, randMinMax(6, 66));
 	}
 	else if (roomType == 3) {
@@ -307,13 +312,14 @@ std::vector<Tile> SecretRoom::summonEntities() {
 	return e;
 }
 
-std::vector<Tile> Tresury::summonEntities() {
+std::vector<Tile> LockedRoom::summonEntities() {
 	std::vector<Tile> e;
 	// Items
 	randEntity<GoldPile>(e, 3, 1, 1, 1 * floor, 100 * floor);
 	randEntity<GoldPile>(e, 5, 1, 4, 1 * floor, 100 * floor);
 	randEntity<HealthPotion>(e, 5, 1, 5);
-	randEntity<IronShortsword>(e, 1, 1, 10, randMinMax(20, 200));
+	randEntity<WoodenSword>(e, 1, 1, 5 * floor, randMinMax(1, 100));
+	randEntity<IronShortsword>(e, 1, 1, 10, randMinMax(1, 200));
 	randEntity<Gambeson>(e, 1, 1, 5 * floor, randMinMax(1, 100));
 	return e;
 }

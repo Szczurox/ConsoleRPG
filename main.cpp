@@ -60,9 +60,10 @@ int main() {
 	std::shared_ptr<MenuItem> title = createMenuItem(L"Console RPG ", BRIGHT_CYAN);
 	std::shared_ptr<MenuItem> newGame = createMenuItem(L"New Game", BRIGHT_GREEN);
 	std::shared_ptr<MenuItem> loadSave = createMenuItem(L"Continue", YELLOW);
+	std::shared_ptr<MenuItem> settings = createMenuItem(L"Settings", GREY);
 	std::shared_ptr<MenuItem> info = createMenuItem(L"Info", BRIGHT_BLUE);
 	std::shared_ptr<MenuItem> exit = createMenuItem(L"Exit", RED);
-	std::vector<std::shared_ptr<MenuItem>> mainOpts = { newGame, loadSave, info, exit };
+	std::vector<std::shared_ptr<MenuItem>> mainOpts = { newGame, loadSave, settings, info, exit };
 	Menu mainMenu(mainOpts, title, true);
 
 	bool end = false;
@@ -79,6 +80,9 @@ int main() {
 			res = chooseSave();
 			break;
 		case 2:
+			settingsMenu();
+			break;
+		case 3:
 			infoMenu(true);
 			break;
 		default:
@@ -104,7 +108,7 @@ int main() {
 int selectNewGame() {
 	std::vector<std::shared_ptr<MenuItem>> items = {};
 	std::vector<std::shared_ptr<MenuItem>> texts = {};
-	std::vector<std::wstring> characters = { L"Class: Warrior", L"Class: Mage", L"Class: Rogue" };
+	std::vector<std::wstring> characters = { L"Class: Warrior", L"Class: Mage", L"Class: Rogue", L"Class: Cultist"};
 	Character character = Character::WARRIOR;
 
 	seed = -1;
@@ -144,6 +148,9 @@ int selectNewGame() {
 		break;
 	case 2:
 		character = Character::ROGUE;
+		break;
+	case 3:
+		character = Character::CULTIST;
 		break;
 	default:
 		character = Character::WARRIOR;
@@ -294,7 +301,8 @@ int startGame(bool load, int saveNum, Character character) {
 
 	// TODO: More sound capabilities, with a mixer, cross-platform
 #if defined(_WIN32) || defined(_WIN64)
-	PlaySound(L"./sounds/game1.wav", NULL, SND_FILENAME | SND_LOOP | SND_ASYNC);
+	if(playMusic)
+		PlaySound(L"./sounds/game1.wav", NULL, SND_FILENAME | SND_LOOP | SND_ASYNC);
 #endif
 
 	// Player Set-Up
@@ -342,7 +350,7 @@ int startGame(bool load, int saveNum, Character character) {
 
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.3.1\nSmith! Bugfix!", YELLOW).c_str());
+			write(color(L"Version: 0.3.2\nCult!", YELLOW).c_str());
 
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
@@ -496,6 +504,7 @@ void infoMenu(bool isMenu) {
 	std::vector<std::shared_ptr<MenuItem>> texts;
 
 	texts.push_back(createMenuItem(L"Controls ", WHITE));
+	texts.push_back(createMenuItem(L" ", WHITE));
 	texts.push_back(createMenuItem(L"W / Up Arrow - Up", WHITE));
 	texts.push_back(createMenuItem(L"S / Down Arrow - Down", WHITE));
 	texts.push_back(createMenuItem(L"A / Left Arrow - Left", WHITE));
@@ -517,12 +526,29 @@ void infoMenu(bool isMenu) {
 	infoMenu.open();
 }
 
+void settingsMenu() {
+	std::vector<std::shared_ptr<MenuItem>> texts;
+
+	texts.push_back(createMenuItem(L"Settings ", GREY));
+
+	std::vector<std::wstring> toggle = { L"Music: On", L"Music: Off" };
+	if (!playMusic)
+		toggle = { L"Music: Off", L"Music: On" };
+	std::shared_ptr<MenuItem> music = createMenuItem(toggle, WHITE);
+	std::shared_ptr<MenuItem> back = createMenuItem(L"Back", WHITE);
+	std::vector<std::shared_ptr<MenuItem>> options({ music, back });
+	Menu infoMenu(options, texts, true);
+	infoMenu.open();
+	if(options[0]->selected) playMusic = !playMusic;
+}
+
 void registerItems() {
 	// Tile items
 	iFactory.registerItem<GoldPile>();
 	// Weapons
 	iFactory.registerItem<WoodenSword>();
 	iFactory.registerItem<IronShortsword>();
+	iFactory.registerItem<BloodyBlade>();
 	// Armor
 	iFactory.registerItem<Gambeson>();
 	iFactory.registerItem<BoneArmor>();
@@ -536,9 +562,12 @@ void registerItems() {
 	iFactory.registerItem<SacramentalBread>();
 	// Ranged
 	iFactory.registerItem<WandOfLightning>();
+	iFactory.registerItem<VampiricWand>();
 	iFactory.registerItem<Shuriken>();
+	iFactory.registerItem<Dart>();
 	// Resources
 	iFactory.registerItem<Bone>();
+	iFactory.registerItem<Key>();
 }
 
 
