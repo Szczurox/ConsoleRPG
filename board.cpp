@@ -42,6 +42,7 @@ Board::Board(int width, int height, Player& player, bool loading, unsigned int s
 	int lastY = 0;
 	int lowY = 0;
 	bool secret = false;
+	int locked = 0;
 	p.curRoomNum = 0;
 	// Add data for creating random amount of random rooms
 	for (int i = 0; i < 30; i++) {
@@ -59,8 +60,10 @@ Board::Board(int width, int height, Player& player, bool loading, unsigned int s
 					curFloor.push_back(std::shared_ptr<Room>(new SecretRoom()));
 					secret = true;
 				}
-				else if (roomType < 10)
-					curFloor.push_back(std::shared_ptr<Room>(new Tresury()));
+				else if (roomType < 15 && !locked) {
+					curFloor.push_back(std::shared_ptr<Room>(new LockedRoom()));
+					locked = i;
+				}
 				else
 					curFloor.push_back(std::shared_ptr<Room>(new BasicRoom()));
 			}
@@ -78,6 +81,18 @@ Board::Board(int width, int height, Player& player, bool loading, unsigned int s
 		}
 	}
 
+	if (locked) {
+		bool keySpawned = false;
+		while (!keySpawned) {
+			int randFloor = randMinMax(0, rooms.size() - 1);
+			int randRoom = randMinMax(0, rooms[randFloor].size() - 1);
+			if (rooms[randFloor][randRoom]->type == RoomType::BASIC) {
+				rooms[randFloor][randRoom]->spawnKey = locked;
+				keySpawned = true;
+			}
+		}
+	}
+
 	// Summon stair room
 	unsigned int hSize = (int)rooms.size();
 	unsigned int lastRoomSize = (int)rooms[hSize - 1].size() - 1;
@@ -91,19 +106,20 @@ Board::Board(int width, int height, Player& player, bool loading, unsigned int s
 		int wSize2 = -1;
 		for (int j = 0; j < wSize; j++) {
 			for (int d = 0; d < 4; d++) {
-				if (rooms[i][j]->type == RoomType::SECRET) continue;
+				if (rooms[i][j]->type == RoomType::SECRET || rooms[i][j]->type == RoomType::BOSS || rooms[i][j]->type == RoomType::LOCKED) continue;
 				if (d == 0 && i - 1 >= 0 && j >= rooms[(size_t)i - 1].size()) continue;
 				if (d == 1 && i + 1 < hSize && j >= rooms[(size_t)i + 1].size()) continue;
 				int dI = i + dy[d];
 				int dJ = j + dx[d];
 				if (dI >= 0 && dJ >= 0 && dI < hSize && dJ < wSize) {
 					bool hasNoConnections = std::equal(std::begin(rooms[dI][dJ]->neighbours), std::end(rooms[dI][dJ]->neighbours), std::begin(EMPTY_NEIGHBOURS));
-					if (rooms[dI][dJ]->type == RoomType::SECRET && !hasNoConnections) continue;
+					bool isOneEntry = rooms[dI][dJ]->type == RoomType::SECRET || rooms[dI][dJ]->type == RoomType::BOSS || rooms[dI][dJ]->type == RoomType::LOCKED;
+					if (isOneEntry && !hasNoConnections) continue;
 					rooms[i][j]->neighbours[d] = rooms[dI][dJ]->num;
-					rooms[i][j]->genDoor(d, rooms[dI][dJ]->type == RoomType::SECRET);
-					if (rooms[dI][dJ]->type == RoomType::SECRET && hasNoConnections) {
+					rooms[i][j]->genDoor(d, rooms[dI][dJ]->type == RoomType::SECRET ? RoomType::SECRET : RoomType::BASIC);
+					if (isOneEntry && hasNoConnections) {
 						rooms[dI][dJ]->neighbours[d == 0 ? 1 : d == 1 ? 0 : d == 2 ? 3 : 2] = rooms[i][i]->num;
-						rooms[dI][dJ]->genDoor(d == 0 ? 1 : d == 1 ? 0 : d == 2 ? 3 : 2);
+						rooms[dI][dJ]->genDoor(d == 0 ? 1 : d == 1 ? 0 : d == 2 ? 3 : 2, rooms[dI][dJ]->type);
 					}
 				}
 			}
@@ -183,13 +199,13 @@ void Board::boardInit() {
 		switch (p.character) {
 		case Character::WARRIOR:
 			p.maxHealth = 110;
+			p.baseDamage++;
 			p.addItem(std::shared_ptr<Item>(new Gambeson(150)));
 			p.addItem(std::shared_ptr<Item>(new WoodenSword(75)));
 			break;
 		case Character::MAGE:
-			p.addItem(std::shared_ptr<Item>(new WandOfLightning(80)));
-			p.addItem(std::shared_ptr<Item>(new HealthPotion(2)));
-			p.addItem(std::shared_ptr<Item>(new MageRobes(500)));
+			p.addItem(std::shared_ptr<Item>(new WandOfLightning()));
+			p.addItem(std::shared_ptr<Item>(new MageRobes()));
 			p.maxHealth = 80;
 			p.health = 80;
 			p.faith = 1;
@@ -202,6 +218,17 @@ void Board::boardInit() {
 			p.maxHealth = 80;
 			p.health = 80;
 			p.baseSpeed++;
+			break;
+		case Character::CULTIST:
+			p.addItem(std::shared_ptr<Item>(new BloodyBlade()));
+			p.addItem(std::shared_ptr<Item>(new CeremonialRobes()));
+			p.faith = -6;
+			p.levelUp();
+			p.levelUp();
+			p.maxHealth = 66;
+			p.health = 66;
+			p.baseDamage = 0;
+			p.baseSpeed = -1;
 			break;
 		}
 		board[3][1] = Tile(std::shared_ptr<Item>(new HealthPotion()), 0);
@@ -272,11 +299,11 @@ void Board::writeBuff(BuffType type) {
 	for (std::shared_ptr<Buff> buff : matchingBuffs) {
 		if (buff->duration > duration) 
 			duration = buff->duration;
-		power += buff->isNegative ? -buff->amount : buff->amount;
+		power += (buff->isNegative ? -buff->amount : buff->amount);
 	}
 
-	std::wstring powerS = (power < 0 ? color(L"-", RED) : color(L"+", GREEN)) + color(std::to_wstring(power), power < 0 ? RED : GREEN);
-	write(L" (% [%] for %)", color(buffType.first, buffType.second), power, std::to_wstring(duration));
+	std::wstring powerS = color(std::to_wstring(power), power < 0 ? RED : GREEN);
+	write(L" (% [%] for %)", color(buffType.first, buffType.second), powerS, std::to_wstring(duration));
 }
 
 void Board::writeStats() {
@@ -291,6 +318,9 @@ void Board::writeStats() {
 		break;
 	case Character::ROGUE:
 		character = L"Rogue";
+		break;
+	case Character::CULTIST:
+		character = L"Cultist";
 		break;
 	}
 	write(color(L"Class: %", CYAN).c_str(), character);
@@ -401,7 +431,19 @@ int Board::movePlayer(char ch) {
 			// Move player a tile
 			moveEntity(p.x, p.y, move);
 			writeStats3();
+			break; 
+		case TileType::LOCKED_DOOR:
+			if (p.inv.find(std::to_wstring(p.curFloor + 1) + L"Key" + std::to_wstring(board[tileX][tileY].roomNum)) != p.inv.end()) {
+				board[tileX][tileY].interacted(&p);
+				p.removeItem(L"Key", p.curFloor + 1, board[tileX][tileY].roomNum, true);
+				startInfo();
+				write(color(L"Unlocked the door!", YELLOW).c_str());
+				break;
+			}
+			startInfo();
+			write(color(L"The door is locked!", GREY).c_str());
 			break;
+		case TileType::BOSS_DOOR:
 		case TileType::SECRET_DOOR:
 		case TileType::DOOR:
 			p.x += dx[move] * 2;
@@ -439,7 +481,7 @@ int Board::movePlayer(char ch) {
 			startInfo();
 			write(L"Dealt ");
 			write(color(L"% damage", RED).c_str(), result[0]);
-			write(L" to % ");
+			write(L" to ");
 			write(color(L"%", enemy->nameColor).c_str(), enemy->name);
 			if (enemy->health > 0) {
 				curBottom += 2;
@@ -471,7 +513,7 @@ int Board::movePlayer(char ch) {
 			int dX2 = p.x + dx[i];
 			int dY2 = p.y + dy[i];
 			if (isTileValid(dX2, dY2)) {
-				if (board[dX2][dY2].type == TileType::PATH || board[dX2][dY2].type == TileType::DOOR || board[dX2][dY2].type == TileType::SECRET_DOOR) {
+				if (board[dX2][dY2].type == TileType::PATH || board[dX2][dY2].type == TileType::DOOR || board[dX2][dY2].type == TileType::SECRET_DOOR || board[dX2][dY2].type == TileType::LOCKED_DOOR ||board[dX2][dY2].type == TileType::BOSS_DOOR) {
 					board[dX2][dY2].isVisible = true;
 					drawTile(dX2, dY2);
 				}
@@ -481,6 +523,8 @@ int Board::movePlayer(char ch) {
 		changeTile(p.x, p.y, Tile(TileType::PLAY, p.curRoomNum));
 
 		p.checkBuffs();
+		if (p.character == Character::CULTIST && chance(1, 3))
+			p.health--;
 		writeStats();
 		writeStats2();
 
@@ -543,6 +587,7 @@ int Board::selectEnemy(char ch, std::shared_ptr<Item> item) {
 		int dmg = 0;
 		for (i; i < std::max(p.baseSpeed - selectable[boardSelected]->speed + 1, 1); i++)
 			dmg += randMinMax(p.character == Character::ROGUE && item->stackable ? std::max(item->maxDmg / 2, item->minDmg + 1) : item->minDmg, item->maxDmg);
+		item->special(&p, dmg);
 		selectable[boardSelected]->hit(p.character == Character::MAGE ? dmg + ((p.level / 5 + 1) * i) : dmg);
 		startInfo();
 		write(L"Dealt ");
@@ -685,6 +730,9 @@ void Board::moveEnemies(std::shared_ptr<Enemy> fought) {
 			std::vector<std::shared_ptr<Item>> drop = e->getLoot();
 			if (p.character == Character::ROGUE && chance(1, 10))
 				drop.push_back(std::shared_ptr<Item>(new GoldPile(std::max(20, e->minGold), std::max(20, e->maxGold))));
+			if (p.character == Character::CULTIST)
+				p.giveBuff(BuffType::REG, randMinMax(1, 3), randMinMax(1, 66));
+			p.checkBuffs();
 			setCursor(0, curBottom);
 			write(L"\nGained");
 			write(color(L" % experience", GREEN).c_str(), p.giveExp(e->xp));
@@ -791,11 +839,11 @@ bool Board::isMoveEnemyValid(int x, int y, int d) {
 	int dX = x + dx[d];
 	int dY = y + dy[d];
 	TileType type = board[dX][dY].type;
-	bool isTypeValid = (type != TileType::DOOR && type != TileType::WALL && type != TileType::NOTHING && type != TileType::ENEM && type != TileType::SECRET_DOOR);
+	bool isTypeValid = (type != TileType::DOOR && type != TileType::WALL && type != TileType::NOTHING && type != TileType::ENEM && type != TileType::SECRET_DOOR && type != TileType::LOCKED_DOOR && type != TileType::BOSS_DOOR);
 	for (int i = 0; i < 4; i++) {
 		int dX2 = dX + dx[i];
 		int dY2 = dY + dy[i];
-		if (isTileValid(dX2, dY2) && (board[dX2][dY2].type == TileType::DOOR || board[dX2][dY2].type == TileType::SECRET_DOOR))
+		if (isTileValid(dX2, dY2) && (board[dX2][dY2].type == TileType::DOOR || board[dX2][dY2].type == TileType::SECRET_DOOR || board[dX2][dY2].type == TileType::LOCKED_DOOR || board[dX2][dY2].type == TileType::BOSS_DOOR))
 			isTypeValid = false;
 	}
 	return (isTypeValid && isTileValid(dX, dY) && type != TileType::NPC);
