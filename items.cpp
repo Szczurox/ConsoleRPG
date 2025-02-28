@@ -100,7 +100,7 @@ std::pair<int, std::function<void()>> Weapon::itemMenu(Player* p) {
         e << L"Required Level: " << reqLevel;
         texts.push_back(createMenuItem(e.str(), RED));
     }
-    if (p->level >= reqLevel) {
+    else {
         std::shared_ptr<MenuItem> equip;
         if (p->weapon.get() != this)
             equip = createMenuItem(L"Equip", BRIGHT_GREEN);
@@ -148,8 +148,7 @@ std::pair<int, std::function<void()>> Armor::itemMenu(Player* p) {
         e << L"Required Level: " << reqLevel;
         texts.push_back(createMenuItem(e.str(), RED));
     }
-
-    if (p->level >= reqLevel) {
+    else {
         std::shared_ptr<MenuItem> equip;
         if (p->armor.get() != this)
             equip = createMenuItem(L"Equip", BRIGHT_GREEN);
@@ -217,8 +216,9 @@ std::pair<int, std::function<void()>> Ranged::itemMenu(Player* p) {
         e << L"Required Level: " << reqLevel;
         texts.push_back(createMenuItem(e.str(), RED));
     }
+    else
+        options.push_back(createMenuItem(L"Use", BRIGHT_GREEN));
 
-    options.push_back(createMenuItem(L"Use", BRIGHT_GREEN));
     options.push_back(createMenuItem(L"Destroy", RED));
     options.push_back(createMenuItem(L"Back", WHITE));
 

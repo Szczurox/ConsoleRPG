@@ -62,6 +62,7 @@ public:
 	std::vector<std::shared_ptr<Buff>> buffs;
 	std::shared_ptr<Item> weapon = nullptr;
 	std::shared_ptr<Item> armor = nullptr;
+	std::shared_ptr<Item> ranged = nullptr;
 	Character character = Character::WARRIOR;
 	unsigned int seed = 0;
 	static const int maxInvSpace = 32;

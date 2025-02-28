@@ -37,6 +37,15 @@ void Player::save(std::wstring fileName) {
 		playerSave << "1" << converter.to_bytes(armor->name) << armor->ID << "\n";
 	else
 		playerSave << "null\n";
+	if (ranged != nullptr) {
+		if (ranged->stackable)
+			playerSave << converter.to_bytes(ranged->name) << "\n";
+		else
+			playerSave << "1" << converter.to_bytes(ranged->name) << ranged->ID << "\n";
+
+	}
+	else
+		playerSave << "null\n";
 }
 
 unsigned int Player::load(std::wstring fileName, ItemFactory& factory) {
@@ -71,18 +80,23 @@ unsigned int Player::load(std::wstring fileName, ItemFactory& factory) {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 	std::string weaponStr = "";
 	std::string armorStr = "";
+	std::string rangedStr = "";
 	std::getline(file, weaponStr);
 	std::getline(file, weaponStr);
 	std::getline(file, armorStr);
+	std::getline(file, rangedStr);
 	std::wstring weaponStrW = converter.from_bytes(weaponStr);
 	std::wstring armorStrW = converter.from_bytes(armorStr);
-	OutputDebugStringW(armorStrW.c_str());
+	std::wstring rangedStrW = converter.from_bytes(rangedStr);
 	auto it = inv.find(weaponStrW);
 	if (it != inv.end())
 		weapon = it->second;
 	auto it2 = inv.find(armorStrW);
 	if (it2 != inv.end())
 		armor = it2->second;
+	auto it3 = inv.find(rangedStrW);
+	if (it3 != inv.end())
+		ranged = it3->second;
 	character = static_cast<Character>(characterInt);
 	return seed;
 }

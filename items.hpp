@@ -393,6 +393,7 @@ public:
 		maxDurability = 66;
 		maxDmg = 8;
 		minDmg = 6;
+		reqLevel = 3;
 	}
 
 	virtual void writeMessage();

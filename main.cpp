@@ -350,7 +350,7 @@ int startGame(bool load, int saveNum, Character character) {
 
 		boards[p.curFloor].drawBoardFull();
 		if (boards.size() == 1)
-			write(color(L"Version: 0.3.2\nCult!", YELLOW).c_str());
+			write(color(L"Version: 0.3.2.5\nBugfix!", YELLOW).c_str());
 
 		while (isOnCurrentBoard && isRunning) {
 			char ch = 0;
